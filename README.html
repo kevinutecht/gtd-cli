@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kevin's GTD System — Paper Meets Terminal</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f5f0e8;
+    --ink: #2c2416;
+    --rust: #a0522d;
+    --teal: #2a7a6e;
+    --cream: #faf6ed;
+    --warm-gray: #8a7e6e;
+  }
+  body { font-family: 'Bricolage Grotesque', sans-serif; background: var(--paper); color: var(--ink); }
+  .font-display { font-family: 'Instrument Serif', serif; }
+  .horizon-line { background: linear-gradient(90deg, var(--rust) 0%, var(--teal) 100%); height: 2px; }
+  .paper-texture {
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  }
+  .week-image { box-shadow: 0 8px 32px rgba(44,36,22,0.18), 0 2px 8px rgba(44,36,22,0.10); border-radius: 4px; }
+  .flip-card { perspective: 1000px; position: relative; }
+  .flip-inner { transition: transform 0.6s; transform-style: preserve-3d; position: relative; width: 100%; height: 100%; }
+  .flip-card:hover .flip-inner { transform: rotateY(180deg); }
+  .flip-front, .flip-back { backface-visibility: hidden; position: absolute; inset: 0; border-radius: 8px; overflow: hidden; }
+  .flip-back { transform: rotateY(180deg); }
+  .flip-front img, .flip-back img { height: 100%; width: 100%; object-fit: contain; }
+  @media (max-width: 768px) {
+    .flip-card { height: 160px; width: 520px; max-width: 95vw; }
+  }
+  @media (min-width: 769px) {
+    .flip-card { height: 220px; width: 800px; max-width: 95vw; }
+  }
+  .habit-row { font-family: 'Bricolage Grotesque', monospace; font-size: 10px; letter-spacing: 0.05em; }
+</style>
+</head>
+<body class="paper-texture">
+
+<!-- Hero -->
+<section class="min-h-[85vh] flex items-center justify-center px-6 py-20">
+  <div class="max-w-4xl text-center">
+    <p class="text-sm tracking-widest uppercase mb-4" style="color: var(--warm-gray);">A Reference Implementation &amp; Pattern Library</p>
+    <h1 class="font-display text-5xl md:text-7xl leading-tight mb-6" style="color: var(--ink);">
+      Paper captures the moment.<br>
+      <span style="color: var(--rust);">The terminal organizes the life.</span>
+    </h1>
+    <p class="text-lg md:text-xl max-w-2xl mx-auto leading-relaxed" style="color: var(--warm-gray);">
+      A hybrid GTD system you can study, fork, and adapt. Built on two engines: a waterproof weekly sheet for daily capture, and a plain-markdown CLI for structured review across five horizons of commitment.
+    </p>
+    <p class="text-sm mt-4 max-w-2xl mx-auto" style="color: var(--warm-gray);">
+      <strong>Not a turnkey app</strong> — a pattern library. Clone it, learn from it, make it your own.
+    </p>
+  </div>
+</section>
+
+<!-- The Two Sides -->
+<section class="px-6 py-20">
+  <div class="max-w-6xl mx-auto">
+    <h2 class="font-display text-3xl md:text-4xl text-center mb-4">Two Engines, One System</h2>
+    <p class="text-center mb-12 max-w-xl mx-auto" style="color: var(--warm-gray);">Paper is fast, tactile, and creative. Digital is searchable, reviewable, and hierarchical. Together they cover every altitude of your life.</p>
+
+    <div class="grid md:grid-cols-2 gap-10">
+      <!-- Paper Side -->
+      <div class="rounded-xl p-8" style="background: var(--cream); border: 1px solid rgba(160,82,45,0.15);">
+        <div class="flex items-center gap-3 mb-6">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect x="4" y="2" width="24" height="28" rx="2" stroke="#a0522d" stroke-width="2"/><line x1="8" y1="8" x2="24" y2="8" stroke="#a0522d" stroke-width="1.5"/><line x1="8" y1="13" x2="20" y2="13" stroke="#a0522d" stroke-width="1.5"/><line x1="8" y1="18" x2="22" y2="18" stroke="#a0522d" stroke-width="1.5"/><line x1="8" y1="23" x2="16" y2="23" stroke="#a0522d" stroke-width="1.5"/></svg>
+          <h3 class="text-xl font-bold">The Weekly Sheet</h3>
+        </div>
+        <ul class="space-y-3 text-sm leading-relaxed">
+          <li class="flex gap-2"><span style="color: var(--rust);">&#10003;</span> <strong>Front:</strong> 7-day grid with daily tasks, weather, and temperature highs</li>
+          <li class="flex gap-2"><span style="color: var(--rust);">&#10003;</span> <strong>Back:</strong> Inbox list, sketches, calligraphy practice, mind maps</li>
+          <li class="flex gap-2"><span style="color: var(--rust);">&#10003;</span> <strong>Bottom row:</strong> Daily habit scores (SC, GE, RN, IP, DI, DC) rated 1–5</li>
+          <li class="flex gap-2"><span style="color: var(--rust);">&#10003;</span> <strong>Multi-color ink:</strong> Red for completed items, blue for notes, black for tasks</li>
+          <li class="flex gap-2"><span style="color: var(--rust);">&#10003;</span> <strong>Paper:</strong> iGage Weatherproof 10-mil, cut in half — waterproof, durable, Copic-friendly</li>
+          <li class="flex gap-2"><span style="color: var(--rust);">&#10003;</span> <strong>Capture:</strong> Write anywhere, anytime — no battery required</li>
+        </ul>
+      </div>
+
+      <!-- Digital Side -->
+      <div class="rounded-xl p-8" style="background: var(--cream); border: 1px solid rgba(42,122,110,0.15);">
+        <div class="flex items-center gap-3 mb-6">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect x="2" y="4" width="28" height="24" rx="2" stroke="#2a7a6e" stroke-width="2"/><text x="8" y="20" font-family="monospace" font-size="10" fill="#2a7a6e">&gt; gtd</text></svg>
+          <h3 class="text-xl font-bold">The Terminal Tool</h3>
+        </div>
+        <ul class="space-y-3 text-sm leading-relaxed">
+          <li class="flex gap-2"><span style="color: var(--teal);">&#10003;</span> <strong>5 horizon files:</strong> purpose.md, vision.md, goals.md, areas.md, projects.md</li>
+          <li class="flex gap-2"><span style="color: var(--teal);">&#10003;</span> <strong>Rust CLI:</strong> Single binary, zero dependencies, works fully offline</li>
+          <li class="flex gap-2"><span style="color: var(--teal);">&#10003;</span> <strong>Weekly review:</strong> Guided 4-step walkthrough with vim keybindings</li>
+          <li class="flex gap-2"><span style="color: var(--teal);">&#10003;</span> <strong>AI integration:</strong> Accountability partner and brainstorm skills via pi coding agent</li>
+          <li class="flex gap-2"><span style="color: var(--teal);">&#10003;</span> <strong>Plain markdown:</strong> Every file is human-readable, scriptable, versionable</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- The Weekly Sheet (Week 30) -->
+<section class="px-6 py-20" style="background: var(--cream);">
+  <div class="max-w-5xl mx-auto">
+    <h2 class="font-display text-3xl md:text-4xl text-center mb-4">The Weekly Sheet in Action</h2>
+    <p class="text-center mb-10 max-w-xl mx-auto" style="color: var(--warm-gray);">Each week, Kevin folds a single sheet of paper. The front is a seven-day grid for daily capture. The back is a canvas for creative expression. Hover to flip.</p>
+
+    <div class="flex justify-center mb-8">
+      <div class="flip-card rounded-lg">
+        <div class="flip-inner">
+          <div class="flip-front">
+            <img src="images/front.jpg" alt="Week 30 front — daily grid with tasks and habit scores" class="week-image w-full h-full object-cover">
+          </div>
+          <div class="flip-back">
+            <img src="images/back.jpg" alt="Week 30 back — inbox list and calligraphy practice" class="week-image w-full h-full object-cover">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="text-center text-xs" style="color: var(--warm-gray);">Week 30 (July 20–26, 2025) — Front: daily tasks with habit tracking. Back: George Bickham copperplate calligraphy practice.</p>
+
+    <!-- Anatomy -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10">
+      <div class="rounded-lg p-4 text-center" style="background: var(--paper);">
+        <div class="text-2xl mb-2">7</div>
+        <div class="text-xs font-semibold uppercase tracking-wide" style="color: var(--warm-gray);">Daily Columns</div>
+        <div class="text-xs mt-1" style="color: var(--warm-gray);">Sunday through Saturday with weather notes</div>
+      </div>
+      <div class="rounded-lg p-4 text-center" style="background: var(--paper);">
+        <div class="text-2xl mb-2">6</div>
+        <div class="text-xs font-semibold uppercase tracking-wide" style="color: var(--warm-gray);">Habit Metrics</div>
+        <div class="text-xs mt-1" style="color: var(--warm-gray);">SC, GE, RN, IP, DI, DC scored 1–5 daily</div>
+      </div>
+      <div class="rounded-lg p-4 text-center" style="background: var(--paper);">
+        <div class="text-2xl mb-2">&#8734;</div>
+        <div class="text-xs font-semibold uppercase tracking-wide" style="color: var(--warm-gray);">Back Side</div>
+        <div class="text-xs mt-1" style="color: var(--warm-gray);">Sketches, calligraphy, mind maps — creative space</div>
+      </div>
+      <div class="rounded-lg p-4 text-center" style="background: var(--paper);">
+        <div class="text-2xl mb-2">0</div>
+        <div class="text-xs font-semibold uppercase tracking-wide" style="color: var(--warm-gray);">Battery</div>
+        <div class="text-xs mt-1" style="color: var(--warm-gray);">Works anywhere — coffee shop, park, church</div>
+      </div>
+    </div>
+
+    <!-- Paper Description -->
+    <div class="mt-10 rounded-xl p-6 md:p-8" style="background: var(--paper); border-left: 4px solid var(--rust);">
+      <h4 class="font-bold text-sm mb-3 flex items-center gap-2">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="2" width="14" height="16" rx="1" stroke="#a0522d" stroke-width="1.5"/><path d="M7 2v16M3 6h14" stroke="#a0522d" stroke-width="1" opacity="0.4"/></svg>
+        The Paper: iGage Weatherproof
+      </h4>
+      <p class="text-sm leading-relaxed mb-3" style="color: var(--ink);">Each sheet is cut from <strong>iGage Weatherproof Paper</strong> — 11" &times; 17" sheets, 10-mil thickness, sold in packs of 50. Cut in half, each weekly sheet is roughly 8.5" &times; 11".</p>
+      <div class="grid md:grid-cols-3 gap-4 text-xs" style="color: var(--warm-gray);">
+        <div class="flex gap-2"><span style="color: var(--rust);">&#10003;</span> <strong>Waterproof:</strong> Survives rain, coffee spills, and pocket lint for a full week</div>
+        <div class="flex gap-2"><span style="color: var(--rust);">&#10003;</span> <strong>Durable:</strong> 10-mil thickness survives being folded and carried daily</div>
+        <div class="flex gap-2"><span style="color: var(--rust);">&#10003;</span> <strong>Copic-compatible:</strong> Takes marker and pen ink without bleeding or feathering</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- The Five Horizons -->
+<section class="px-6 py-20">
+  <div class="max-w-5xl mx-auto">
+    <h2 class="font-display text-3xl md:text-4xl text-center mb-4">The Five Horizons</h2>
+    <p class="text-center mb-12 max-w-xl mx-auto" style="color: var(--warm-gray);">GTD organizes life from purpose down to next actions. Each horizon is a markdown file. The terminal tool lets you browse them all.</p>
+
+    <div class="space-y-0">
+      <!-- H5 -->
+      <div class="flex items-start gap-4 md:gap-6 py-6" style="border-top: 2px solid var(--rust);">
+        <div class="flex-shrink-0 w-16 text-center">
+          <div class="text-xs font-bold tracking-widest uppercase" style="color: var(--rust);">H5</div>
+          <div class="font-display text-lg italic">Purpose</div>
+        </div>
+        <div class="flex-1">
+          <p class="text-sm font-semibold mb-1">Why am I here?</p>
+          <p class="text-sm leading-relaxed" style="color: var(--warm-gray);">"To grow into my best self, explore the outdoors, see God everywhere — and share what I find." Core values: Faith, Sacred Writing, Coherence, Integrity, Wisdom, Compassion.</p>
+          <code class="text-xs px-2 py-1 rounded mt-2 inline-block" style="background: var(--cream); color: var(--teal);">gtd purpose</code>
+        </div>
+      </div>
+
+      <!-- H4 -->
+      <div class="flex items-start gap-4 md:gap-6 py-6" style="border-top: 1px solid rgba(160,82,45,0.2);">
+        <div class="flex-shrink-0 w-16 text-center">
+          <div class="text-xs font-bold tracking-widest uppercase" style="color: var(--rust);">H4</div>
+          <div class="font-display text-lg italic">Vision</div>
+        </div>
+        <div class="flex-1">
+          <p class="text-sm font-semibold mb-1">What does 3 years from now look like?</p>
+          <p class="text-sm leading-relaxed" style="color: var(--warm-gray);">10 life areas painted in concrete detail: frugal finances, strong health, Catholic faith practice, close family bonds, perpetual creativity, nature as medicine, a trusted system on autopilot.</p>
+          <code class="text-xs px-2 py-1 rounded mt-2 inline-block" style="background: var(--cream); color: var(--teal);">gtd vision</code>
+        </div>
+      </div>
+
+      <!-- H3 -->
+      <div class="flex items-start gap-4 md:gap-6 py-6" style="border-top: 1px solid rgba(160,82,45,0.2);">
+        <div class="flex-shrink-0 w-16 text-center">
+          <div class="text-xs font-bold tracking-widest uppercase" style="color: var(--rust);">H3</div>
+          <div class="font-display text-lg italic">Goals</div>
+        </div>
+        <div class="flex-1">
+          <p class="text-sm font-semibold mb-1">What am I actively working toward?</p>
+          <p class="text-sm leading-relaxed" style="color: var(--warm-gray);">12 active goals with measurable targets: daily exercise, Bible reading, regular sibling contact, frugal living, stretch savings through 2028, weekly guitar, daily adventures.</p>
+          <code class="text-xs px-2 py-1 rounded mt-2 inline-block" style="background: var(--cream); color: var(--teal);">gtd goals</code>
+        </div>
+      </div>
+
+      <!-- H2 -->
+      <div class="flex items-start gap-4 md:gap-6 py-6" style="border-top: 1px solid rgba(160,82,45,0.2);">
+        <div class="flex-shrink-0 w-16 text-center">
+          <div class="text-xs font-bold tracking-widest uppercase" style="color: var(--rust);">H2</div>
+          <div class="font-display text-lg italic">Areas</div>
+        </div>
+        <div class="flex-1">
+          <p class="text-sm font-semibold mb-1">What life areas need ongoing attention?</p>
+          <p class="text-sm leading-relaxed" style="color: var(--warm-gray);">10 areas that are never "done": Physical Health, Spiritual Life, Family, Community, Finances, Creativity, Outdoor Adventure, Home, Productivity, Rest. Each has specific standards.</p>
+          <code class="text-xs px-2 py-1 rounded mt-2 inline-block" style="background: var(--cream); color: var(--teal);">gtd areas</code>
+        </div>
+      </div>
+
+      <!-- H1 -->
+      <div class="flex items-start gap-4 md:gap-6 py-6" style="border-top: 1px solid rgba(160,82,45,0.2); border-bottom: 2px solid var(--teal);">
+        <div class="flex-shrink-0 w-16 text-center">
+          <div class="text-xs font-bold tracking-widest uppercase" style="color: var(--teal);">H1</div>
+          <div class="font-display text-lg italic">Projects</div>
+        </div>
+        <div class="flex-1">
+          <p class="text-sm font-semibold mb-1">What multi-step outcomes am I committed to?</p>
+          <p class="text-sm leading-relaxed" style="color: var(--warm-gray);">Currently 2 active projects with next actions marked: Learn "Temple of Syrinx" on guitar, and brainstorm volunteer ideas for 2027. Completed projects (like the will rewrite) stay in the file as a record.</p>
+          <code class="text-xs px-2 py-1 rounded mt-2 inline-block" style="background: var(--cream); color: var(--teal);">gtd projects</code>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- The Weekly Review -->
+<section class="px-6 py-20" style="background: var(--cream);">
+  <div class="max-w-5xl mx-auto">
+    <h2 class="font-display text-3xl md:text-4xl text-center mb-4">The Weekly Review</h2>
+    <p class="text-center mb-3 max-w-xl mx-auto" style="color: var(--warm-gray);">Every week, a guided 4-step walkthrough keeps the system trusted. Run <code style="color: var(--teal);">gtd review</code> and follow the prompts.</p>
+    <p class="text-center mb-12 max-w-xl mx-auto text-xs" style="color: var(--warm-gray);">Steps 0 and 3 integrate with the <strong>pi coding agent</strong> — spawning the <code style="color: var(--teal);">accountability-partner</code> and <code style="color: var(--teal);">gtd-brainstorm</code> skills for AI-powered review and ideation.</p>
+
+    <div class="grid md:grid-cols-4 gap-6">
+      <div class="rounded-xl p-6 text-center" style="background: var(--paper); border-top: 3px solid var(--rust);">
+        <div class="text-3xl font-display mb-3" style="color: var(--rust);">0</div>
+        <h4 class="font-bold text-sm mb-2">Assessment</h4>
+        <p class="text-xs leading-relaxed" style="color: var(--warm-gray);">Read last week's board. See your accountability partner score. Press <code style="background:var(--cream);padding:1px 4px;border-radius:3px">p</code> to spawn the pi <strong>accountability-partner</strong> skill for AI-powered performance feedback.</p>
+      </div>
+      <div class="rounded-xl p-6 text-center" style="background: var(--paper); border-top: 3px solid var(--rust);">
+        <div class="text-3xl font-display mb-3" style="color: var(--rust);">1</div>
+        <h4 class="font-bold text-sm mb-2">Get Clear</h4>
+        <p class="text-xs leading-relaxed" style="color: var(--warm-gray);">Process the calendar. Check waiting-for items. Clear the inbox to zero.</p>
+      </div>
+      <div class="rounded-xl p-6 text-center" style="background: var(--paper); border-top: 3px solid var(--rust);">
+        <div class="text-3xl font-display mb-3" style="color: var(--rust);">2</div>
+        <h4 class="font-bold text-sm mb-2">Get Current</h4>
+        <p class="text-xs leading-relaxed" style="color: var(--warm-gray);">Review projects, next actions, someday/maybe. Walk the trigger list. Check all five horizons.</p>
+      </div>
+      <div class="rounded-xl p-6 text-center" style="background: var(--paper); border-top: 3px solid var(--teal);">
+        <div class="text-3xl font-display mb-3" style="color: var(--teal);">3</div>
+        <h4 class="font-bold text-sm mb-2">Get Creative</h4>
+        <p class="text-xs leading-relaxed" style="color: var(--warm-gray);">Brainstorm new ideas. Press <code style="background:var(--cream);padding:1px 4px;border-radius:3px">g</code> to spawn the pi <strong>gtd-brainstorm</strong> skill and generate 30 fresh ideas tailored to your system.</p>
+      </div>
+    </div>
+
+    <!-- Flow diagram -->
+    <div class="mt-12 rounded-xl p-8" style="background: var(--paper);">
+      <h4 class="text-sm font-bold uppercase tracking-widest text-center mb-6" style="color: var(--warm-gray);">Weekly Cycle</h4>
+      <svg viewBox="0 0 700 120" class="w-full" style="max-height: 120px;">
+        <!-- Flow -->
+        <rect x="10" y="30" width="120" height="60" rx="8" fill="none" stroke="#a0522d" stroke-width="2"/>
+        <text x="70" y="55" text-anchor="middle" font-family="Instrument Serif" font-size="14" fill="#a0522d">Paper Sheet</text>
+        <text x="70" y="75" text-anchor="middle" font-family="Bricolage Grotesque" font-size="10" fill="#8a7e6e">Daily capture</text>
+
+        <line x1="130" y1="60" x2="170" y2="60" stroke="#8a7e6e" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+        <rect x="170" y="30" width="120" height="60" rx="8" fill="none" stroke="#2a7a6e" stroke-width="2"/>
+        <text x="230" y="55" text-anchor="middle" font-family="Instrument Serif" font-size="14" fill="#2a7a6e">Manual Transfer</text>
+        <text x="230" y="75" text-anchor="middle" font-family="Bricolage Grotesque" font-size="10" fill="#8a7e6e">Accomplishments</text>
+
+        <line x1="290" y1="60" x2="330" y2="60" stroke="#8a7e6e" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+        <rect x="330" y="30" width="120" height="60" rx="8" fill="none" stroke="#a0522d" stroke-width="2"/>
+        <text x="390" y="55" text-anchor="middle" font-family="Instrument Serif" font-size="14" fill="#a0522d">Weekly Review</text>
+        <text x="390" y="75" text-anchor="middle" font-family="Bricolage Grotesque" font-size="10" fill="#8a7e6e">gtd review</text>
+
+        <line x1="450" y1="60" x2="490" y2="60" stroke="#8a7e6e" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+        <rect x="490" y="30" width="120" height="60" rx="8" fill="none" stroke="#2a7a6e" stroke-width="2"/>
+        <text x="550" y="55" text-anchor="middle" font-family="Instrument Serif" font-size="14" fill="#2a7a6e">New Sheet</text>
+        <text x="550" y="75" text-anchor="middle" font-family="Bricolage Grotesque" font-size="10" fill="#8a7e6e">Start fresh</text>
+
+        <!-- Return arrow -->
+        <path d="M 550 90 Q 550 115 390 115 Q 230 115 230 90" fill="none" stroke="#8a7e6e" stroke-width="1" stroke-dasharray="4 3"/>
+        <text x="390" y="112" text-anchor="middle" font-family="Bricolage Grotesque" font-size="9" fill="#8a7e6e">repeat weekly</text>
+
+        <defs><marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="none" stroke="#8a7e6e" stroke-width="1"/></marker></defs>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- The Ground Level -->
+<section class="px-6 py-20">
+  <div class="max-w-5xl mx-auto">
+    <h2 class="font-display text-3xl md:text-4xl text-center mb-4">Beyond the Horizons</h2>
+    <p class="text-center mb-12 max-w-xl mx-auto" style="color: var(--warm-gray);">Below the five horizons sit the ground-level lists that keep daily life running.</p>
+
+    <div class="grid md:grid-cols-3 gap-6">
+      <div class="rounded-xl p-6" style="background: var(--cream);">
+        <h4 class="font-bold text-sm mb-3 flex items-center gap-2">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="#a0522d" stroke-width="1.5"/><path d="M9 4v5l3 3" stroke="#a0522d" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Calendar
+        </h4>
+        <p class="text-xs leading-relaxed" style="color: var(--warm-gray);">Family birthdays, holy days, financial due dates, full moon names, seasonal events. Extends 18+ months out.</p>
+      </div>
+      <div class="rounded-xl p-6" style="background: var(--cream);">
+        <h4 class="font-bold text-sm mb-3 flex items-center gap-2">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="14" height="14" rx="2" stroke="#2a7a6e" stroke-width="1.5"/><path d="M6 6h6M6 9h4M6 12h5" stroke="#2a7a6e" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Waiting For
+        </h4>
+        <p class="text-xs leading-relaxed" style="color: var(--warm-gray);">Items delegated or dependent on others: new dentist, IRA investment timing, completed obituary notification.</p>
+      </div>
+      <div class="rounded-xl p-6" style="background: var(--cream);">
+        <h4 class="font-bold text-sm mb-3 flex items-center gap-2">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 9c0-3.3 2.7-6 6-6s6 2.7 6 6-2.7 6-6 6" stroke="#a0522d" stroke-width="1.5" stroke-linecap="round"/><path d="M9 3v6l4 2" stroke="#a0522d" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Trigger List
+        </h4>
+        <p class="text-xs leading-relaxed" style="color: var(--warm-gray);">Categorized prompts for when you're stuck: home repairs, finances, faith, health, transportation, relationships.</p>
+      </div>
+      <div class="rounded-xl p-6" style="background: var(--cream);">
+        <h4 class="font-bold text-sm mb-3 flex items-center gap-2">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="#2a7a6e" stroke-width="1.5"/><path d="M6 9c0-1.7 1.3-3 3-3" stroke="#2a7a6e" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Someday / Maybe
+        </h4>
+        <p class="text-xs leading-relaxed" style="color: var(--warm-gray);">Parking lot for ideas that aren't active yet: Energization Exercises mastery, fitness cart for power blocks.</p>
+      </div>
+      <div class="rounded-xl p-6" style="background: var(--cream);">
+        <h4 class="font-bold text-sm mb-3 flex items-center gap-2">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="3" y="5" width="12" height="10" rx="1" stroke="#a0522d" stroke-width="1.5"/><path d="M6 5V3h6v2" stroke="#a0522d" stroke-width="1.5"/></svg>
+          Checklists
+        </h4>
+        <p class="text-xs leading-relaxed" style="color: var(--warm-gray);">Reference documents: diet plan with protein targets, 11 supplements, room-by-room maintenance, monthly budget, neighbor names.</p>
+      </div>
+      <div class="rounded-xl p-6" style="background: var(--cream);">
+        <h4 class="font-bold text-sm mb-3 flex items-center gap-2">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 14l5-10 5 10" stroke="#2a7a6e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10h6" stroke="#2a7a6e" stroke-width="1.5"/></svg>
+          Seed List
+        </h4>
+        <p class="text-xs leading-relaxed" style="color: var(--warm-gray);">15 go-to next actions for low-energy moments: play guitar, go fishing, cut hair, attend Mass, study copperplate.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Daily Rituals -->
+<section class="px-6 py-20" style="background: var(--cream);">
+  <div class="max-w-5xl mx-auto">
+    <h2 class="font-display text-3xl md:text-4xl text-center mb-4">Daily Rituals</h2>
+    <p class="text-center mb-3 max-w-xl mx-auto" style="color: var(--warm-gray);">Bookend each day with intention. Morning sets the direction. Evening reflects on what happened.</p>
+    <p class="text-center mb-10 max-w-xl mx-auto text-xs" style="color: var(--warm-gray);">Based on <em>High Performance Habits</em> by Brendon Burchard.</p>
+
+    <div class="flex justify-center mb-10">
+      <img src="images/cover.jpg" alt="Daily rituals cover sheet — Morning Mindset and Evening Review prompts" class="week-image" style="max-width: 100%; height: auto; max-height: 360px; object-fit: contain;">
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-8">
+      <div class="rounded-xl p-8" style="background: var(--paper); border-left: 4px solid var(--rust);">
+        <h4 class="font-display text-xl mb-4" style="color: var(--rust);">Morning Mindset</h4>
+        <ol class="space-y-2 text-sm" style="color: var(--warm-gray);">
+          <li>1. <strong>Gratitude & Vision</strong> — What am I thankful for?</li>
+          <li>2. <strong>Intention & Focus</strong> — What matters most today?</li>
+          <li>3. <strong>Energy & Presence</strong> — How am I showing up?</li>
+          <li>4. <strong>Service & Connection</strong> — Who can I help?</li>
+          <li>5. <strong>Growth & Excitement</strong> — What am I learning?</li>
+        </ol>
+      </div>
+      <div class="rounded-xl p-8" style="background: var(--paper); border-left: 4px solid var(--teal);">
+        <h4 class="font-display text-xl mb-4" style="color: var(--teal);">Evening Review</h4>
+        <ol class="space-y-2 text-sm" style="color: var(--warm-gray);">
+          <li>1. <strong>Effort & Focus</strong> — Did I give my best?</li>
+          <li>2. <strong>Learning & Growth</strong> — What did I learn?</li>
+          <li>3. <strong>Impact & Connection</strong> — Who did I reach?</li>
+          <li>4. <strong>Gratitude & Pride</strong> — What am I proud of?</li>
+          <li>5. <strong>Improvement</strong> — What would I do differently?</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- The Connection -->
+<section class="px-6 py-20">
+  <div class="max-w-5xl mx-auto">
+    <h2 class="font-display text-3xl md:text-4xl text-center mb-4">How Paper Feeds Digital</h2>
+    <p class="text-center mb-12 max-w-xl mx-auto" style="color: var(--warm-gray);">The paper sheet captures raw life. The digital system organizes it into horizons. The weekly review bridges them.</p>
+
+    <div class="rounded-xl p-8 md:p-12" style="background: var(--cream);">
+      <svg viewBox="0 0 700 280" class="w-full" style="max-height: 280px;">
+        <!-- Paper side -->
+        <rect x="20" y="20" width="200" height="240" rx="12" fill="none" stroke="#a0522d" stroke-width="2"/>
+        <text x="120" y="50" text-anchor="middle" font-family="Instrument Serif" font-size="18" fill="#a0522d">Paper</text>
+        <text x="120" y="75" text-anchor="middle" font-family="Bricolage Grotesque" font-size="11" fill="#8a7e6e">Weekly Sheet</text>
+
+        <rect x="40" y="95" width="160" height="28" rx="4" fill="#a0522d" fill-opacity="0.08"/>
+        <text x="120" y="114" text-anchor="middle" font-family="Bricolage Grotesque" font-size="11" fill="#2c2416">Daily tasks & notes</text>
+
+
+
+        <rect x="40" y="130" width="160" height="28" rx="4" fill="#a0522d" fill-opacity="0.08"/>
+        <text x="120" y="149" text-anchor="middle" font-family="Bricolage Grotesque" font-size="11" fill="#2c2416">Weather & reflections</text>
+
+        <rect x="40" y="165" width="160" height="28" rx="4" fill="#a0522d" fill-opacity="0.08"/>
+        <text x="120" y="184" text-anchor="middle" font-family="Bricolage Grotesque" font-size="11" fill="#2c2416">Back: inbox & sketches</text>
+
+        <!-- Arrow -->
+        <line x1="220" y1="140" x2="280" y2="140" stroke="#8a7e6e" stroke-width="2" marker-end="url(#arrow2)"/>
+        <text x="250" y="132" text-anchor="middle" font-family="Bricolage Grotesque" font-size="10" fill="#8a7e6e">copy</text>
+        <text x="250" y="160" text-anchor="middle" font-family="Bricolage Grotesque" font-size="10" fill="#8a7e6e">accomplishments</text>
+
+        <!-- Digital side -->
+        <rect x="280" y="20" width="200" height="240" rx="12" fill="none" stroke="#2a7a6e" stroke-width="2"/>
+        <text x="380" y="50" text-anchor="middle" font-family="Instrument Serif" font-size="18" fill="#2a7a6e">Digital</text>
+        <text x="380" y="75" text-anchor="middle" font-family="Bricolage Grotesque" font-size="11" fill="#8a7e6e">Markdown Files</text>
+
+        <rect x="300" y="95" width="160" height="28" rx="4" fill="#2a7a6e" fill-opacity="0.08"/>
+        <text x="380" y="114" text-anchor="middle" font-family="Bricolage Grotesque" font-size="11" fill="#2c2416">projects.md (H1)</text>
+
+        <rect x="300" y="130" width="160" height="28" rx="4" fill="#2a7a6e" fill-opacity="0.08"/>
+        <text x="380" y="149" text-anchor="middle" font-family="Bricolage Grotesque" font-size="11" fill="#2c2416">areas.md (H2)</text>
+
+        <rect x="300" y="165" width="160" height="28" rx="4" fill="#2a7a6e" fill-opacity="0.08"/>
+        <text x="380" y="184" text-anchor="middle" font-family="Bricolage Grotesque" font-size="11" fill="#2c2416">goals.md (H3)</text>
+
+        <rect x="300" y="200" width="160" height="28" rx="4" fill="#2a7a6e" fill-opacity="0.08"/>
+        <text x="380" y="219" text-anchor="middle" font-family="Bricolage Grotesque" font-size="11" fill="#2c2416">+ vision.md, purpose.md</text>
+
+        <!-- Weekly Review bridge -->
+        <line x1="480" y1="140" x2="530" y2="140" stroke="#8a7e6e" stroke-width="2" marker-end="url(#arrow2)"/>
+        <text x="505" y="132" text-anchor="middle" font-family="Bricolage Grotesque" font-size="10" fill="#8a7e6e">review</text>
+
+        <rect x="530" y="80" width="150" height="120" rx="12" fill="none" stroke="#a0522d" stroke-width="2" stroke-dasharray="6 3"/>
+        <text x="605" y="110" text-anchor="middle" font-family="Instrument Serif" font-size="16" fill="#a0522d">Weekly</text>
+        <text x="605" y="132" text-anchor="middle" font-family="Instrument Serif" font-size="16" fill="#a0522d">Review</text>
+        <text x="605" y="158" text-anchor="middle" font-family="Bricolage Grotesque" font-size="10" fill="#8a7e6e">Get Clear</text>
+        <text x="605" y="173" text-anchor="middle" font-family="Bricolage Grotesque" font-size="10" fill="#8a7e6e">Get Current</text>
+        <text x="605" y="188" text-anchor="middle" font-family="Bricolage Grotesque" font-size="10" fill="#8a7e6e">Get Creative</text>
+
+        <defs><marker id="arrow2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="none" stroke="#8a7e6e" stroke-width="1"/></marker></defs>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- Key Insight -->
+<section class="px-6 py-20" style="background: var(--cream);">
+  <div class="max-w-3xl mx-auto text-center">
+    <h2 class="font-display text-3xl md:text-4xl mb-6">Why This Works</h2>
+    <div class="space-y-6 text-base leading-relaxed" style="color: var(--ink);">
+      <p><strong>Paper removes friction.</strong> No login, no loading screen, no battery. A folded sheet fits in a pocket. The act of handwriting engages memory differently than typing.</p>
+      <p><strong>Markdown removes lock-in.</strong> Every file is plain text. Version it with git. Edit it with vim. Feed it to an AI. Print it. The data is yours forever.</p>
+      <p><strong>The terminal removes distraction.</strong> No notifications, no social feeds, no ads. Just your data and your keyboard, exactly how you configured it.</p>
+      <p><strong>The weekly review removes drift.</strong> Every Sunday, the system asks you: are your daily actions aligned with your five horizons of commitment?</p>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="px-6 py-12 text-center" style="border-top: 1px solid rgba(160,82,45,0.15);">
+  <p class="font-display text-xl mb-2">One binary. Markdown files. A folded sheet of paper.</p>
+  <p class="text-sm" style="color: var(--warm-gray);">A reference implementation — fork it, learn from it, make it your own.</p>
+</footer>
+
+</body>
+</html>
