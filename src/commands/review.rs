@@ -324,6 +324,7 @@ fn run_loop(
                         // Launch accountability partner skill via pi
                         terminal::disable_raw_mode()?;
                         ui::reset_terminal(out)?;
+                        println!("\n  Running skill <accountability-partner>... please wait.\n");
                         out.flush()?;
                         let home = std::env::var("HOME").unwrap();
                         let skill_path = format!("{}/.pi/agent/skills/accountability-partner", home);
@@ -520,6 +521,7 @@ fn run_loop(
                 // Launch brainstorm skill via pi
                 terminal::disable_raw_mode()?;
                 ui::reset_terminal(out)?;
+                println!("\n  Running skill <gtd-brainstorm>... please wait.\n");
                 out.flush()?;
                 let home = std::env::var("HOME").unwrap();
                 let skill_path = format!("{}/.pi/agent/skills/gtd-brainstorm", home);
