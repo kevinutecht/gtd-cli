@@ -22,3 +22,4 @@ All notable changes to this project will be documented in this file.
 - Trigger list walkthrough
 - Full vim keybindings in TUI (j/k, h/l, G, g, x, e, n, q)
 
+Updated 2026-07-03
