@@ -12,13 +12,13 @@ Built on two engines: a waterproof weekly sheet for daily capture, and a plain-m
 
 - [Interactive Overview](https://kevinutecht.github.io/gtd-cli/) — visual explainer of the full system
 - [Examples](examples/sample-data/) — sample horizon files (purpose, vision, goals, areas, projects)
-- [Skills](https://github.com/kevinutecht/pi-skill-accountability-partner) — pi coding agent integration
+- [Skills](https://github.com/kevinutecht/pi-skill-accountability-partner) — MiMo Code integration
 
 ## What You Can Learn
 
 - **Data modeling** — model GTD concepts as plain markdown files
 - **TUI architecture** — crossterm-based weekly review with vim keybindings
-- **Agent integration** — spawning pi skills from a TUI for AI-powered review
+- **Agent integration** — spawning MiMo Code skills from a TUI for AI-powered review
 - **Weekly board format** — scored accountability with structured feedback
 - **Zero lock-in** — your data lives in `~/data/gtd/` as `.md` files you own forever
 

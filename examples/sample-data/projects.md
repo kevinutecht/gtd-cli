@@ -42,4 +42,4 @@
 - [x] implement markdown parsing
 - [x] build weekly review TUI
 - [x] add accountability partner command
-- [x] integrate with pi coding agent skills
+- [x] integrate with MiMo Code skills
