@@ -28,7 +28,6 @@ Built on two engines: a waterproof weekly sheet for daily capture, and a plain-m
 git clone https://github.com/kevinutecht/gtd-cli.git
 cd gtd-cli
 cargo build --release
-cp target/release/gtd ~/bin/gtd
 ```
 
 ## License
