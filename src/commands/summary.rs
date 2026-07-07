@@ -164,6 +164,19 @@ pub fn run() -> io::Result<()> {
         println!();
     }
 
+    // ── Accountability ──────────────────────────────────────
+    let accountability = load_latest_accountability();
+    if let Some(ref acc) = accountability {
+        println!("## Accountability (from {})", acc.date);
+        println!();
+        println!("**Pattern to Watch:**");
+        println!("- {}", acc.pattern);
+        println!();
+        println!("**One Challenge:**");
+        println!("- {}", acc.challenge);
+        println!();
+    }
+
     // ── Inbox ───────────────────────────────────────────────
     if !inbox_items.is_empty() {
         println!("## Inbox ({})", inbox_items.len());
@@ -175,6 +188,78 @@ pub fn run() -> io::Result<()> {
     }
 
     Ok(())
+}
+
+struct AccountabilityNote {
+    date: String,
+    pattern: String,
+    challenge: String,
+}
+
+fn load_latest_accountability() -> Option<AccountabilityNote> {
+    let weekly_dir = data::data_dir().join("weekly");
+    if !weekly_dir.exists() {
+        return None;
+    }
+
+    let mut entries: Vec<String> = std::fs::read_dir(&weekly_dir)
+        .ok()?
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().extension().map_or(false, |ext| ext == "md"))
+        .filter_map(|e| e.file_name().into_string().ok())
+        .filter(|name| name != "template.md")
+        .collect();
+
+    entries.sort();
+    entries.reverse();
+
+    for filename in &entries {
+        let filepath = weekly_dir.join(filename);
+        let content = match std::fs::read_to_string(&filepath) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+
+        let pattern = extract_section(&content, "Pattern to Watch:");
+        let challenge = extract_section(&content, "One Challenge:");
+
+        if let (Some(pattern), Some(challenge)) = (pattern, challenge) {
+            let date = filename.trim_end_matches(".md").to_string();
+            return Some(AccountabilityNote { date, pattern, challenge });
+        }
+    }
+
+    None
+}
+
+fn extract_section(content: &str, header: &str) -> Option<String> {
+    let header_pos = content.find(header)?;
+    let after_header = &content[header_pos + header.len()..];
+
+    let mut lines = Vec::new();
+    for line in after_header.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            if !lines.is_empty() {
+                break;
+            }
+            continue;
+        }
+        if trimmed.starts_with("## ") {
+            break;
+        }
+        if trimmed.starts_with("- ") {
+            lines.push(trimmed[2..].to_string());
+        } else {
+            lines.push(trimmed.to_string());
+        }
+    }
+
+    if lines.is_empty() {
+        None
+    } else {
+        Some(lines.join(" "))
+    }
 }
 
 fn load_inbox_open() -> Vec<String> {

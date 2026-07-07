@@ -946,21 +946,23 @@ fn draw_step(
 
     let desc_lines: Vec<&str> = step.desc.split('\n').collect();
     let desc_start = 8u16;
+    let max_line_len = desc_lines.iter().map(|l| l.chars().count()).max().unwrap_or(0) as u16;
+    let block_left = cols.saturating_sub(max_line_len) / 2;
     for (i, line) in desc_lines.iter().enumerate() {
         let r = desc_start + i as u16;
         if r >= 12 { break; }
-        queue!(out, MoveTo(0, r))?;
-        queue!(out, SetBackgroundColor(ui::BG), SetForegroundColor(ui::SYS_TEXT))?;
-        write!(out, "{}", ui::center_text(line, cols))?;
+        queue!(out, MoveTo(block_left, r))?;
+        queue!(out, SetBackgroundColor(ui::BG), SetForegroundColor(ui::ACCENT))?;
+        write!(out, "{}", line)?;
         queue!(out, style::ResetColor)?;
     }
 
     if let Some(note) = notes.get(&step_index) {
         let note_row = desc_start + desc_lines.len() as u16;
         if note_row < 13 {
-            queue!(out, MoveTo(0, note_row))?;
-            queue!(out, SetBackgroundColor(ui::BG), SetForegroundColor(ui::QUOTE), SetAttribute(Attribute::Italic))?;
-            write!(out, "{}", ui::center_text(&format!("\u{1f4dd} {}", note), cols))?;
+            queue!(out, MoveTo(block_left, note_row))?;
+            queue!(out, SetBackgroundColor(ui::BG), SetForegroundColor(ui::ACCENT), SetAttribute(Attribute::Italic))?;
+            write!(out, "{}", &format!("\u{1f4dd} {}", note))?;
             queue!(out, style::ResetColor)?;
         }
     }

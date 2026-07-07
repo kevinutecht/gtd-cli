@@ -1,5 +1,5 @@
 [package]
-name = "gtd"
+name = "gtd-cli"
 version = "0.1.1"
 edition = "2021"
 description = "GTD CLI — morning/evening review, inbox, projects, weekly assessment"
