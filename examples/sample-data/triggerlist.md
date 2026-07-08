@@ -16,10 +16,10 @@
 - repairs needed
 - cleaning/organizing projects
 - appliances to fix/replace
-- iphone (apps, tracfone plan, data left)
+- phone plan
 - tools
 - office equipment (computer backups)
-- furnature
+- furniture
 - power generator and solar panels
 - utilities
 - storage unit
@@ -28,15 +28,13 @@
 
 ## Financial
 - bills to pay
-- banks accounts to review
+- bank accounts to review
 - tax preparation items
-- insurance policies to review (car, condo)
-- will
-- fidelity IRA
-- reusables
-- cash-on-hand
-- budget
-- crypto (etherfi)
+- insurance policies to review
+- will and estate planning
+- investments
+- budget review
+- savings goals
 
 ## Faith
 - mass
