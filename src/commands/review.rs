@@ -278,6 +278,23 @@ fn run_loop(
             ui::Key::Char('q') | ui::Key::CtrlC => break,
             _ if *finished => break,
 
+            // ── Quick capture (works anywhere) ──────────────────
+            ui::Key::Char('c') => {
+                let (cols, rows) = ui::terminal_size();
+                queue!(out, MoveTo(0, rows - 1))?;
+                queue!(out, SetBackgroundColor(ui::BG_LIGHT), SetForegroundColor(ui::ACCENT))?;
+                write!(out, "{}", " ".repeat(cols as usize))?;
+                queue!(out, MoveTo(0, rows - 1))?;
+                write!(out, " Capture: ")?;
+                out.flush()?;
+
+                if let Some(text) = ui::_read_line(out, 10, rows - 1)? {
+                    if !text.trim().is_empty() {
+                        data::save_quick_capture(text.trim());
+                    }
+                }
+            }
+
             // ── Assessment screen keys ──────────────────────────
             _ if *step_index == 0 => {
                 let asm = assessment.as_mut().unwrap();
@@ -791,6 +808,8 @@ fn draw_assessment(out: &mut impl Write, asm: &AssessmentState) -> io::Result<()
         (" scroll ", ui::C_DIM, false),
         (" e ", ui::ACCENT, true),
         (" edit ", ui::C_DIM, false),
+        (" c ", ui::ACCENT, true),
+        (" capture ", ui::C_DIM, false),
         (" p ", ui::ACCENT, true),
         (" partner ", ui::C_DIM, false),
         (" SPACE/b ", ui::ACCENT, true),
@@ -1041,6 +1060,8 @@ fn draw_step(
         }
         parts.push((" e ", ui::ACCENT, true));
         parts.push((" edit ", ui::C_DIM, false));
+        parts.push((" c ", ui::ACCENT, true));
+        parts.push((" capture ", ui::C_DIM, false));
         parts.push((" SPACE/b ", ui::ACCENT, true));
         parts.push((" step ", ui::C_DIM, false));
         parts.push((" q ", ui::ERROR, true));
@@ -1051,6 +1072,7 @@ fn draw_step(
             (" l ", ui::ACCENT, true), (" next ", ui::C_DIM, false),
             (" h ", ui::ACCENT, true), (" back ", ui::C_DIM, false),
             (" e ", ui::ACCENT, true), (" edit ", ui::C_DIM, false),
+            (" c ", ui::ACCENT, true), (" capture ", ui::C_DIM, false),
             (" SPACE/b ", ui::ACCENT, true), (" step ", ui::C_DIM, false),
             (" q ", ui::ERROR, true), (" quit ", ui::C_DIM, false),
         ]
@@ -1058,6 +1080,7 @@ fn draw_step(
         vec![
             (" j/k ", ui::ACCENT, true), (" scroll ", ui::C_DIM, false),
             (" e ", ui::ACCENT, true), (" edit ", ui::C_DIM, false),
+            (" c ", ui::ACCENT, true), (" capture ", ui::C_DIM, false),
             (" SPACE/b ", ui::ACCENT, true), (" step ", ui::C_DIM, false),
             (" q ", ui::ERROR, true), (" quit ", ui::C_DIM, false),
         ]
@@ -1065,12 +1088,14 @@ fn draw_step(
         vec![
             (" j/k ", ui::ACCENT, true), (" scroll ", ui::C_DIM, false),
             (" e ", ui::ACCENT, true), (" edit ", ui::C_DIM, false),
+            (" c ", ui::ACCENT, true), (" capture ", ui::C_DIM, false),
             (" SPACE/b ", ui::ACCENT, true), (" step ", ui::C_DIM, false),
             (" q ", ui::ERROR, true), (" quit ", ui::C_DIM, false),
         ]
     } else if altitudes_state.is_some() {
         vec![
             (" j/k ", ui::ACCENT, true), (" scroll ", ui::C_DIM, false),
+            (" c ", ui::ACCENT, true), (" capture ", ui::C_DIM, false),
             (" SPACE/b ", ui::ACCENT, true), (" step ", ui::C_DIM, false),
             (" q ", ui::ERROR, true), (" quit ", ui::C_DIM, false),
         ]
@@ -1078,6 +1103,7 @@ fn draw_step(
         vec![
             (" j/k ", ui::ACCENT, true), (" scroll ", ui::C_DIM, false),
             (" e ", ui::ACCENT, true), (" edit ", ui::C_DIM, false),
+            (" c ", ui::ACCENT, true), (" capture ", ui::C_DIM, false),
             (" g ", ui::ACCENT, true), (" generate ", ui::C_DIM, false),
             (" b ", ui::ACCENT, true), (" back ", ui::C_DIM, false),
             (" SPACE ", ui::ACCENT, true), (" next ", ui::C_DIM, false),

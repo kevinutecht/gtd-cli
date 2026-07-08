@@ -1133,6 +1133,38 @@ pub fn save_projects(projects: &[Project]) {
     fs::write(path, content).ok();
 }
 
+/// Prepend a quick-capture task to the top of projects.md under a "Quick Capture" section.
+pub fn save_quick_capture(text: &str) {
+    let path = projects_path();
+    let existing = if path.exists() {
+        fs::read_to_string(&path).unwrap_or_default()
+    } else {
+        String::new()
+    };
+
+    let section_header = "## Quick Capture\n";
+    let new_item = format!("- [ ] {}\n", text);
+
+    // Check if a Quick Capture section already exists at the top
+    if let Some(pos) = existing.find(section_header) {
+        // Insert new item right after the header
+        let insert_pos = pos + section_header.len();
+        let mut result = String::new();
+        result.push_str(&existing[..insert_pos]);
+        result.push_str(&new_item);
+        result.push_str(&existing[insert_pos..]);
+        fs::write(path, result).ok();
+    } else {
+        // Prepend a new Quick Capture section before everything else
+        let mut result = String::new();
+        result.push_str(section_header);
+        result.push_str(&new_item);
+        result.push('\n');
+        result.push_str(&existing);
+        fs::write(path, result).ok();
+    }
+}
+
 /// Save projects to file, writing completed projects under a ## Completed section.
 #[allow(dead_code)]
 pub fn save_projects_with_completed(active: &[Project], completed: &[Project]) {
