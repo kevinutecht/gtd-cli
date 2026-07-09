@@ -76,10 +76,8 @@ fn run_loop(
                     *finished = true;
                 }
             }
-            ui::Key::Char('j') | ui::Key::Up => {
-                if *index > 0 {
-                    *index -= 1;
-                }
+            ui::Key::Char('j') | ui::Key::Up if *index > 0 => {
+                *index -= 1;
             }
             _ => {}
         }

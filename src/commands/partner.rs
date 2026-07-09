@@ -155,13 +155,13 @@ pub fn run_import(filepath: &str) -> io::Result<()> {
         }
 
         // Section detection
-        if trimmed.starts_with("## ") {
-            let heading = trimmed[3..].trim();
+        if let Some(heading) = trimmed.strip_prefix("## ") {
+            let heading = heading.trim();
 
             // Close previous sections
             #[allow(unused_assignments)]
             if in_partner_notes {
-                board.partner_notes = Some(wrap_notes(&partner_notes_lines.join("\n").trim(), 110));
+                board.partner_notes = Some(wrap_notes(partner_notes_lines.join("\n").trim(), 110));
                 partner_notes_lines.clear();
                 in_partner_notes = false;
             }
@@ -171,12 +171,7 @@ pub fn run_import(filepath: &str) -> io::Result<()> {
                 in_accomplishments = false;
                 in_struggles = false;
                 continue;
-            } else if heading.contains("LAST WEEK") || heading.contains("PAST WEEK") {
-                in_partner_notes = false;
-                in_accomplishments = false;
-                in_struggles = false;
-                continue;
-            } else if heading.contains("THIS WEEK") || heading.contains("FOCUS") {
+            } else if heading.contains("LAST WEEK") || heading.contains("PAST WEEK") || heading.contains("THIS WEEK") || heading.contains("FOCUS") {
                 in_partner_notes = false;
                 in_accomplishments = false;
                 in_struggles = false;
@@ -188,8 +183,8 @@ pub fn run_import(filepath: &str) -> io::Result<()> {
             }
         }
 
-        if trimmed.starts_with("### ") {
-            let heading = trimmed[4..].trim();
+        if let Some(heading) = trimmed.strip_prefix("### ") {
+            let heading = heading.trim();
 
             if in_partner_notes {
                 partner_notes_lines.push(line.to_string());
@@ -224,7 +219,7 @@ pub fn run_import(filepath: &str) -> io::Result<()> {
 
     // Close any open partner notes section
     if in_partner_notes && !partner_notes_lines.is_empty() {
-        board.partner_notes = Some(wrap_notes(&partner_notes_lines.join("\n").trim(), 110));
+        board.partner_notes = Some(wrap_notes(partner_notes_lines.join("\n").trim(), 110));
     }
 
     data::save_weekly_board(&board, date_str);

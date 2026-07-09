@@ -195,7 +195,7 @@ impl AssessmentState {
     }
 
     fn board(&self) -> Option<data::WeeklyBoard> {
-        self.current_date().map(|d| data::load_weekly_board(d))
+        self.current_date().map(data::load_weekly_board)
     }
 
     fn prev_board(&self) -> Option<(String, data::WeeklyBoard)> {
@@ -263,6 +263,7 @@ pub fn run() -> io::Result<()> {
 
 // ── Main loop ──────────────────────────────────────────────────────────
 
+#[allow(clippy::too_many_arguments)]
 fn run_loop(
     out: &mut impl Write,
     steps: &[data::ReviewStep],
@@ -860,7 +861,7 @@ fn compute_review_streak(dates: &[String]) -> (usize, usize) {
                 chrono::NaiveDate::parse_from_str(prev, "%Y-%m-%d"),
             ) {
                 let diff = (c - p).num_days();
-                if diff >= 5 && diff <= 9 { // Allow 5-9 days for weekly cadence
+                if (5..=9).contains(&diff) { // Allow 5-9 days for weekly cadence
                     streak += 1;
                 } else {
                     break;
@@ -1190,6 +1191,7 @@ fn init_viewer_state(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn draw_step(
     out: &mut impl Write,
     steps: &[data::ReviewStep],
@@ -1345,15 +1347,7 @@ fn draw_step(
             (" SPACE/b ", ui::ACCENT, true), (" step ", ui::C_DIM, false),
             (" q ", ui::ERROR, true), (" quit ", ui::C_DIM, false),
         ]
-    } else if calendar_state.is_some() {
-        vec![
-            (" j/k ", ui::ACCENT, true), (" scroll ", ui::C_DIM, false),
-            (" e ", ui::ACCENT, true), (" edit ", ui::C_DIM, false),
-            (" c ", ui::ACCENT, true), (" capture ", ui::C_DIM, false),
-            (" SPACE/b ", ui::ACCENT, true), (" step ", ui::C_DIM, false),
-            (" q ", ui::ERROR, true), (" quit ", ui::C_DIM, false),
-        ]
-    } else if checklists_state.is_some() {
+    } else if calendar_state.is_some() || checklists_state.is_some() {
         vec![
             (" j/k ", ui::ACCENT, true), (" scroll ", ui::C_DIM, false),
             (" e ", ui::ACCENT, true), (" edit ", ui::C_DIM, false),
@@ -1483,6 +1477,7 @@ fn draw_calendar_viewer(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn draw_projects_viewer(
     out: &mut impl Write,
     projects: &[data::Project],

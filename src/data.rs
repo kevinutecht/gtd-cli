@@ -36,6 +36,7 @@ pub struct TriggerItem {
     pub text: String,
 }
 
+#[allow(clippy::type_complexity)]
 pub fn parse_trigger_list(filepath: &PathBuf) -> Option<(Vec<TriggerItem>, Vec<(String, Vec<String>)>)> {
     let content = fs::read_to_string(filepath).ok()?;
     let mut sections: Vec<(String, Vec<String>)> = Vec::new();
@@ -290,7 +291,7 @@ pub fn review_steps() -> Vec<ReviewStep> {
 }
 // ── Profile (About Me) ────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Profile {
     #[serde(default)]
     pub name: String,
@@ -300,17 +301,6 @@ pub struct Profile {
     pub core_values: Vec<String>,
     #[serde(default)]
     pub roles: Vec<String>,
-}
-
-impl Default for Profile {
-    fn default() -> Self {
-        Self {
-            name: String::new(),
-            purpose: String::new(),
-            core_values: Vec::new(),
-            roles: Vec::new(),
-        }
-    }
 }
 
 pub fn purpose_file() -> PathBuf {
@@ -443,8 +433,10 @@ fn parse_goals_md(content: &str) -> Vec<Goal> {
             let item = item.trim();
             if item.is_empty() { continue; }
 
-            let mut goal = Goal::default();
-            goal.status = GoalStatus::from_str(current_section);
+            let mut goal = Goal {
+                status: GoalStatus::from_str(current_section),
+                ..Default::default()
+            };
 
             // Extract inline HTML comments: <!-- key: value -->
             let mut text = item.to_string();
@@ -669,25 +661,17 @@ fn parse_vision_md(content: &str) -> Vision {
 
 fn _render_vision_md(vision: &Vision) -> String {
     let mut out = String::new();
-    out.push_str(&format!("# {}
-
-", vision.time_horizon));
+    out.push_str(&format!("# {}\n\n", vision.time_horizon));
 
     for area in &vision.areas {
-        out.push_str(&format!("## {}
-", area.category));
-        out.push_str(&format!("{}
-
-", area.vision_text));
+        out.push_str(&format!("## {}\n", area.category));
+        out.push_str(&format!("{}\n\n", area.vision_text));
         if !area.picture_of_success.is_empty() {
-            out.push_str("### Picture of Success
-");
+            out.push_str("### Picture of Success\n");
             for item in &area.picture_of_success {
-                out.push_str(&format!("- {}
-", item));
+                out.push_str(&format!("- {}\n", item));
             }
-            out.push_str("
-");
+            out.push('\n');
         }
     }
 
@@ -713,26 +697,13 @@ pub fn _save_vision(vision: &Vision) {
 
 // ── Weekly Board ──────────────────────────────────────────────────────
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct WeeklyBoard {
     pub score: Option<u8>,
     pub score_note: Option<String>,
     pub partner_notes: Option<String>,
     pub accomplishments: Vec<String>,
     pub struggles: Vec<String>,
-}
-
-impl Default for WeeklyBoard {
-    fn default() -> Self {
-        Self {
-            score: None,
-            score_note: None,
-            partner_notes: None,
-            accomplishments: Vec::new(),
-            struggles: Vec::new(),
-
-        }
-    }
 }
 
 pub fn weekly_dir() -> PathBuf {
@@ -857,33 +828,33 @@ fn render_markdown_board(board: &WeeklyBoard, date_str: &str) -> String {
         }
     }
     if let Some(ref notes) = board.partner_notes {
-        out.push_str("\n");
+        out.push('\n');
         out.push_str(notes);
-        out.push_str("\n");
+        out.push('\n');
     }
-    out.push_str("\n");
+    out.push('\n');
 
     // Accomplishments
     out.push_str("## Accomplishments\n");
     if board.accomplishments.is_empty() {
-        out.push_str("\n");
+        out.push('\n');
     } else {
         for item in &board.accomplishments {
             out.push_str(&format!("- {}\n", item));
         }
     }
-    out.push_str("\n");
+    out.push('\n');
 
     // Struggles
     out.push_str("## Struggles\n");
     if board.struggles.is_empty() {
-        out.push_str("\n");
+        out.push('\n');
     } else {
         for item in &board.struggles {
             out.push_str(&format!("- {}\n", item));
         }
     }
-    out.push_str("\n");
+    out.push('\n');
 
     out
 }

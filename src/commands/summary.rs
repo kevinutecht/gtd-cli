@@ -205,7 +205,7 @@ fn load_latest_accountability() -> Option<AccountabilityNote> {
     let mut entries: Vec<String> = std::fs::read_dir(&weekly_dir)
         .ok()?
         .filter_map(|e| e.ok())
-        .filter(|e| e.path().extension().map_or(false, |ext| ext == "md"))
+        .filter(|e| e.path().extension().is_some_and(|ext| ext == "md"))
         .filter_map(|e| e.file_name().into_string().ok())
         .filter(|name| name != "template.md")
         .collect();
@@ -248,8 +248,8 @@ fn extract_section(content: &str, header: &str) -> Option<String> {
         if trimmed.starts_with("## ") {
             break;
         }
-        if trimmed.starts_with("- ") {
-            lines.push(trimmed[2..].to_string());
+        if let Some(rest) = trimmed.strip_prefix("- ") {
+            lines.push(rest.to_string());
         } else {
             lines.push(trimmed.to_string());
         }
@@ -276,8 +276,8 @@ fn load_inbox_open() -> Vec<String> {
     let mut items = Vec::new();
     for line in content.lines() {
         let trimmed = line.trim();
-        if trimmed.starts_with("- [ ] ") {
-            items.push(trimmed[6..].to_string());
+        if let Some(rest) = trimmed.strip_prefix("- [ ] ") {
+            items.push(rest.to_string());
         }
     }
     items
