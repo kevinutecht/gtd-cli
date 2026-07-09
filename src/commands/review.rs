@@ -149,6 +149,18 @@ impl BrainstormState {
     }
 }
 
+// ── Summary state ──────────────────────────────────────────────────────
+
+struct SummaryState {
+    scroll: u16,
+}
+
+impl SummaryState {
+    fn new() -> Self {
+        Self { scroll: 0 }
+    }
+}
+
 // ── Assessment state ───────────────────────────────────────────────────
 
 struct AssessmentState {
@@ -205,6 +217,10 @@ pub fn run() -> io::Result<()> {
     let mut notes: HashMap<usize, String> = HashMap::new();
     let mut step_index: usize = 0;
     let mut finished = false;
+    let mut showing_summary = true;
+
+    // Summary state (startup screen)
+    let mut summary_state: Option<SummaryState> = Some(SummaryState::new());
 
     // Assessment state (step 0)
     let mut assessment: Option<AssessmentState> = Some(AssessmentState::new());
@@ -227,6 +243,8 @@ pub fn run() -> io::Result<()> {
         &mut notes,
         &mut step_index,
         &mut finished,
+        &mut showing_summary,
+        &mut summary_state,
         &mut assessment,
         &mut list_state,
         &mut trigger_state,
@@ -251,6 +269,8 @@ fn run_loop(
     notes: &mut HashMap<usize, String>,
     step_index: &mut usize,
     finished: &mut bool,
+    showing_summary: &mut bool,
+    summary_state: &mut Option<SummaryState>,
     assessment: &mut Option<AssessmentState>,
     list_state: &mut Option<ListState>,
     trigger_state: &mut Option<TriggerState>,
@@ -262,6 +282,9 @@ fn run_loop(
     loop {
         if *finished {
             draw_summary(out, steps, notes)?;
+        } else if *showing_summary {
+            // Summary dashboard screen
+            draw_summary_screen(out, summary_state.as_ref().unwrap())?;
         } else if *step_index == 0 {
             // Assessment screen
             draw_assessment(out, assessment.as_mut().unwrap())?;
@@ -292,6 +315,30 @@ fn run_loop(
                     if !text.trim().is_empty() {
                         data::save_quick_capture(text.trim());
                     }
+                }
+            }
+
+            // ── Summary screen keys ─────────────────────────────
+            _ if *showing_summary => {
+                let summ = summary_state.as_mut().unwrap();
+                match key {
+                    ui::Key::Char(' ') => {
+                        // Advance to Assessment screen
+                        *showing_summary = false;
+                        *step_index = 0;
+                    }
+                    ui::Key::Down | ui::Key::Char('j') => {
+                        let (_, rows) = ui::terminal_size();
+                        let lines = build_summary_lines();
+                        let max_scroll = (lines.len() as u16).saturating_sub(rows.saturating_sub(3));
+                        if summ.scroll < max_scroll {
+                            summ.scroll = (summ.scroll + 3).min(max_scroll);
+                        }
+                    }
+                    ui::Key::Up | ui::Key::Char('k') => {
+                        summ.scroll = summ.scroll.saturating_sub(3);
+                    }
+                    _ => {}
                 }
             }
 
@@ -362,7 +409,7 @@ fn run_loop(
                         ui::hide_cursor(out)?;
                         asm.reload_dates();
                     }
-                    ui::Key::Char(' ') | ui::Key::Char('b') => {
+                    ui::Key::Char(' ') => {
                         // Continue to step 1 (first GTD review step)
                         *step_index = 1;
                         init_viewer_state(
@@ -370,6 +417,11 @@ fn run_loop(
                             trigger_state, calendar_state, checklists_state, altitudes_state,
                             brainstorm_state,
                         );
+                    }
+                    ui::Key::Char('b') => {
+                        // Go back to summary screen
+                        *showing_summary = true;
+                        *step_index = 0;
                     }
                     _ => {}
                 }
@@ -659,6 +711,7 @@ fn run_loop(
                     *step_index -= 1;
                     init_viewer_state(&steps[*step_index], list_state, trigger_state, calendar_state, checklists_state, altitudes_state, brainstorm_state);
                 } else if *step_index == 1 {
+                    // Go back to Assessment screen
                     *step_index = 0;
                 }
             }
@@ -666,6 +719,220 @@ fn run_loop(
         }
     }
     Ok(())
+}
+
+// ── Summary dashboard screen ──────────────────────────────────────────
+
+fn divider_line(label: &str) -> String {
+    let dash = "\u{2500}";
+    let prefix = format!("{}{} ", dash, dash);
+    let suffix_len = 50usize.saturating_sub(prefix.len() + label.len() + 2);
+    format!("{}{} {}", prefix, label, dash.repeat(suffix_len))
+}
+
+fn build_summary_lines() -> Vec<(String, Color, bool)> {
+    let mut lines: Vec<(String, Color, bool)> = Vec::new();
+
+    let profile = data::load_profile();
+    let goals = data::load_goals();
+    let areas = data::load_areas();
+    let vision = data::load_vision();
+    let projects = data::load_projects();
+    let next_actions = data::load_next_actions();
+    let waiting = data::load_waiting_for();
+    let agendas = data::load_agendas();
+    let someday = data::load_someday_maybe();
+    let events = data::load_calendar();
+    let dates = data::list_weekly_board_dates();
+
+    // Purpose
+    if !profile.purpose.is_empty() {
+        lines.push(("Purpose".to_string(), ui::ACCENT, true));
+        lines.push((format!("  {}", profile.purpose), ui::FG, false));
+        lines.push((String::new(), ui::FG, false));
+    }
+
+    // ── Horizons ───────────────────────────────────────────────────────
+    lines.push((divider_line("Horizons"), ui::ACCENT_SOFT, false));
+
+    // H5 Purpose
+    if profile.purpose.is_empty() {
+        lines.push(("  H5 Purpose          \u{2717} not set".to_string(), ui::C_DIM, false));
+    } else {
+        lines.push(("  H5 Purpose          \u{2713} set".to_string(), ui::LINK, false));
+    }
+
+    // H4 Vision
+    let vision_count = vision.areas.len();
+    if vision_count == 0 {
+        lines.push(("  H4 Vision           \u{2717} not set".to_string(), ui::C_DIM, false));
+    } else {
+        lines.push((format!("  H4 Vision           {} area{}", vision_count, if vision_count == 1 { "" } else { "s" }), ui::LINK, false));
+    }
+
+    // H3 Goals
+    let active_goals: Vec<_> = goals.iter().filter(|g| g.status == data::GoalStatus::Active).collect();
+    if goals.is_empty() {
+        lines.push(("  H3 Goals            no goals".to_string(), ui::C_DIM, false));
+    } else {
+        lines.push((format!("  H3 Goals            {} active", active_goals.len()), ui::LINK, false));
+    }
+
+    // H2 Areas
+    if areas.is_empty() {
+        lines.push(("  H2 Areas            no areas".to_string(), ui::C_DIM, false));
+    } else {
+        lines.push((format!("  H2 Areas            {} area{}", areas.len(), if areas.len() == 1 { "" } else { "s" }), ui::LINK, false));
+    }
+
+    // H1 Projects
+    let active_projects: Vec<_> = projects.iter().filter(|p| !p.items.is_empty()).collect();
+    if projects.is_empty() {
+        lines.push(("  H1 Projects         no projects".to_string(), ui::C_DIM, false));
+    } else {
+        lines.push((format!("  H1 Projects         {} active", active_projects.len()), ui::LINK, false));
+    }
+
+    lines.push((String::new(), ui::FG, false));
+
+    // ── Actions & Commitments ──────────────────────────────────────────
+    lines.push((divider_line("Actions & Commitments"), ui::ACCENT_SOFT, false));
+
+    lines.push((format!("  Next Actions        {} item{}", next_actions.len(), if next_actions.len() == 1 { "" } else { "s" }), ui::FG, false));
+    lines.push((format!("  Waiting For         {} item{}", waiting.len(), if waiting.len() == 1 { "" } else { "s" }), ui::FG, false));
+    lines.push((format!("  Agendas             {} people", agendas.len()), ui::FG, false));
+    lines.push((format!("  Someday/Maybe       {} item{}", someday.len(), if someday.len() == 1 { "" } else { "s" }), ui::FG, false));
+
+    lines.push((String::new(), ui::FG, false));
+
+    // ── Calendar ───────────────────────────────────────────────────────
+    lines.push((divider_line("Calendar"), ui::ACCENT_SOFT, false));
+
+    let today = chrono::Local::now();
+    let today_num = today.year() * 10000 + today.month() as i32 * 100 + today.day() as i32;
+    let this_week: Vec<_> = events.iter().filter(|e| {
+        let event_num = e.year * 10000 + e.month as i32 * 100 + e.day as i32;
+        event_num >= today_num && event_num <= today_num + 7
+    }).collect();
+    lines.push((format!("  This week           {} event{}", this_week.len(), if this_week.len() == 1 { "" } else { "s" }), ui::FG, false));
+
+    lines.push((String::new(), ui::FG, false));
+
+    // ── Recent Performance ─────────────────────────────────────────────
+    lines.push((divider_line("Recent Performance"), ui::ACCENT_SOFT, false));
+
+    if let Some(latest_date) = dates.last() {
+        let board = data::load_weekly_board(latest_date);
+        if let Some(score) = board.score {
+            let note = board.score_note.as_deref().unwrap_or("");
+            let truncated = if note.len() > 50 { format!("{}...", &note[..47]) } else { note.to_string() };
+            lines.push((format!("  Latest Score        {}/10 \u{2014} {}", score, truncated), ui::ACCENT, false));
+        } else {
+            lines.push(("  Latest Score        no score".to_string(), ui::C_DIM, false));
+        }
+
+        // Review streak
+        let (total, streak) = compute_review_streak(&dates);
+        if total > 0 {
+            lines.push((format!("  Reviews Completed   {} total ({} week streak)", total, streak), ui::FG, false));
+        }
+    } else {
+        lines.push(("  Latest Score        no boards yet".to_string(), ui::C_DIM, false));
+    }
+
+    lines
+}
+
+fn compute_review_streak(dates: &[String]) -> (usize, usize) {
+    if dates.is_empty() {
+        return (0, 0);
+    }
+
+    let total = dates.len();
+    let mut streak = 1usize;
+
+    // Walk backward from the most recent, counting consecutive weeks
+    for i in (0..dates.len() - 1).rev() {
+        if let (Some(curr), Some(prev)) = (dates.get(i + 1), dates.get(i)) {
+            // Parse dates and check if they're ~7 days apart
+            if let (Ok(c), Ok(p)) = (
+                chrono::NaiveDate::parse_from_str(curr, "%Y-%m-%d"),
+                chrono::NaiveDate::parse_from_str(prev, "%Y-%m-%d"),
+            ) {
+                let diff = (c - p).num_days();
+                if diff >= 5 && diff <= 9 { // Allow 5-9 days for weekly cadence
+                    streak += 1;
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+    }
+
+    (total, streak)
+}
+
+fn draw_summary_screen(out: &mut impl Write, summ: &SummaryState) -> io::Result<()> {
+    let (cols, rows) = ui::terminal_size();
+    ui::clear_screen(out)?;
+
+    ui::draw_top_bar(out, " \u{1f4cb} GTD Summary ", " weekly review ")?;
+
+    let lines = build_summary_lines();
+
+    // Render visible lines
+    let visible_start = summ.scroll as usize;
+    let visible_end = (visible_start + rows.saturating_sub(3) as usize).min(lines.len());
+    let visible: Vec<&(String, Color, bool)> = lines
+        .iter()
+        .skip(visible_start)
+        .take(visible_end.saturating_sub(visible_start))
+        .collect();
+
+    for (i, (text, color, bold)) in visible.iter().enumerate() {
+        let row = 2 + i as u16;
+        if row >= rows.saturating_sub(1) { break; }
+        queue!(out, MoveTo(0, row))?;
+        queue!(out, SetBackgroundColor(ui::BG), SetForegroundColor(*color))?;
+        if *bold {
+            queue!(out, SetAttribute(Attribute::Bold))?;
+        }
+        let visible_text = truncate_display(text, cols);
+        write!(out, "{}", visible_text)?;
+        let shown_width = UnicodeWidthStr::width(visible_text.as_str()) as u16;
+        let pad = cols.saturating_sub(shown_width);
+        if pad > 0 {
+            write!(out, "{}", " ".repeat(pad as usize))?;
+        }
+        queue!(out, style::ResetColor)?;
+    }
+
+    // Fill remaining rows
+    let content_end_row = 2 + visible.len() as u16;
+    let help_row = rows.saturating_sub(1);
+    for row in content_end_row..help_row {
+        queue!(out, MoveTo(0, row))?;
+        queue!(out, SetBackgroundColor(ui::BG), SetForegroundColor(ui::FG))?;
+        write!(out, "{}", " ".repeat(cols as usize))?;
+    }
+    queue!(out, style::ResetColor)?;
+
+    // Help bar
+    let help_parts = vec![
+        (" SPACE ", ui::ACCENT, true),
+        (" start review ", ui::C_DIM, false),
+        (" \u{2191}\u{2193}/jk ", ui::ACCENT, true),
+        (" scroll ", ui::C_DIM, false),
+        (" c ", ui::ACCENT, true),
+        (" capture ", ui::C_DIM, false),
+        (" q ", ui::ERROR, true),
+        (" quit ", ui::C_DIM, false),
+    ];
+    ui::draw_help_bar(out, &help_parts)?;
+
+    out.flush()
 }
 
 // ── Assessment screen ─────────────────────────────────────────────────
@@ -812,8 +1079,10 @@ fn draw_assessment(out: &mut impl Write, asm: &AssessmentState) -> io::Result<()
         (" capture ", ui::C_DIM, false),
         (" p ", ui::ACCENT, true),
         (" partner ", ui::C_DIM, false),
-        (" SPACE/b ", ui::ACCENT, true),
+        (" SPACE ", ui::ACCENT, true),
         (" review ", ui::C_DIM, false),
+        (" b ", ui::ACCENT, true),
+        (" summary ", ui::C_DIM, false),
         (" q ", ui::ERROR, true),
         (" quit ", ui::C_DIM, false),
     ];
