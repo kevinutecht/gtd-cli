@@ -42,4 +42,4 @@
 - [x] implement markdown parsing
 - [x] build weekly review TUI
 - [x] add accountability partner command
-- [x] integrate with MiMo Code skills
+- [x] integrate with Codex skills

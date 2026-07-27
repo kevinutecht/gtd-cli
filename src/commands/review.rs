@@ -386,22 +386,30 @@ fn run_loop(
                         }
                     }
                     ui::Key::Char('p') => {
-                        // Launch accountability partner skill via mimo
+                        // Launch accountability partner skill via Codex
                         terminal::disable_raw_mode()?;
                         ui::reset_terminal(out)?;
                         println!("\n  Running skill <accountability-partner>... please wait.\n");
                         out.flush()?;
                         let home = std::env::var("HOME").unwrap();
                         let gtd_data = format!("{}/data/gtd", home);
-                        let status = std::process::Command::new("mimo")
-                            .args(["run", "--dir", &gtd_data, "Load the accountability-partner skill and review my weekly performance"])
+                        let status = std::process::Command::new("codex")
+                            .args([
+                                "exec",
+                                "--sandbox",
+                                "workspace-write",
+                                "--skip-git-repo-check",
+                                "-C",
+                                &gtd_data,
+                                "$accountability-partner Review my weekly performance.",
+                            ])
                             .current_dir(&gtd_data)
                             .stdin(std::process::Stdio::inherit())
                             .stdout(std::process::Stdio::inherit())
                             .stderr(std::process::Stdio::inherit())
                             .status();
                         if let Err(e) = status {
-                            eprintln!("Failed to launch mimo: {}", e);
+                            eprintln!("Failed to launch Codex: {}", e);
                             eprintln!("Press Enter to continue...");
                             let mut buf = String::new();
                             std::io::stdin().read_line(&mut buf).ok();
@@ -587,22 +595,30 @@ fn run_loop(
                 auto_scroll_brainstorm(bs);
             }
             ui::Key::Char('g') if brainstorm_state.is_some() => {
-                // Launch brainstorm skill via mimo
+                // Launch brainstorm skill via Codex
                 terminal::disable_raw_mode()?;
                 ui::reset_terminal(out)?;
                 println!("\n  Running skill <gtd-brainstorm>... please wait.\n");
                 out.flush()?;
                 let home = std::env::var("HOME").unwrap();
                 let gtd_data = format!("{}/data/gtd", home);
-                let status = std::process::Command::new("mimo")
-                    .args(["run", "--dir", &gtd_data, "Load the gtd-brainstorm skill and brainstorm 30 new ideas for my GTD system"])
+                let status = std::process::Command::new("codex")
+                    .args([
+                        "exec",
+                        "--sandbox",
+                        "workspace-write",
+                        "--skip-git-repo-check",
+                        "-C",
+                        &gtd_data,
+                        "$gtd-brainstorm Brainstorm 30 new ideas for my GTD system.",
+                    ])
                     .current_dir(&gtd_data)
                     .stdin(std::process::Stdio::inherit())
                     .stdout(std::process::Stdio::inherit())
                     .stderr(std::process::Stdio::inherit())
                     .status();
                 if let Err(e) = status {
-                    eprintln!("Failed to launch mimo: {}", e);
+                    eprintln!("Failed to launch Codex: {}", e);
                     eprintln!("Press Enter to continue...");
                     let mut buf = String::new();
                     std::io::stdin().read_line(&mut buf).ok();

@@ -1,5 +1,5 @@
 // Partner — write accountability partner notes into a weekly board
-// Called by mimo's accountability-partner skill
+// Called by Codex's accountability-partner skill
 
 use std::io;
 
@@ -11,7 +11,7 @@ use crate::data;
 pub fn run_write(date_str: &str, score: Option<u8>, notes: &str) -> io::Result<()> {
     let mut board = data::load_weekly_board(date_str);
 
-    // Normalize literal \n sequences into real newlines (mimo passes them as strings)
+    // Normalize literal \n sequences into real newlines (agent prompts may pass them as strings)
     let normalized = notes.replace("\\n", "\n");
     board.score = Some(score.unwrap_or(0));
     board.partner_notes = Some(wrap_notes(normalized.trim(), 110));

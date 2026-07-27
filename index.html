@@ -90,7 +90,7 @@
           <li class="flex gap-2"><span style="color: var(--teal);">&#10003;</span> <strong>5 horizon files:</strong> purpose.md, vision.md, goals.md, areas.md, projects.md</li>
           <li class="flex gap-2"><span style="color: var(--teal);">&#10003;</span> <strong>Rust CLI:</strong> Single binary, zero dependencies, works fully offline</li>
           <li class="flex gap-2"><span style="color: var(--teal);">&#10003;</span> <strong>Weekly review:</strong> Guided 4-step walkthrough with vim keybindings</li>
-          <li class="flex gap-2"><span style="color: var(--teal);">&#10003;</span> <strong>AI integration:</strong> Accountability partner and brainstorm skills via MiMo Code</li>
+          <li class="flex gap-2"><span style="color: var(--teal);">&#10003;</span> <strong>AI integration:</strong> Accountability partner and brainstorm skills via Codex CLI</li>
           <li class="flex gap-2"><span style="color: var(--teal);">&#10003;</span> <strong>Plain markdown:</strong> Every file is human-readable, scriptable, versionable</li>
         </ul>
       </div>
@@ -239,13 +239,13 @@
   <div class="max-w-5xl mx-auto">
     <h2 class="font-display text-3xl md:text-4xl text-center mb-4">The Weekly Review</h2>
     <p class="text-center mb-3 max-w-xl mx-auto" style="color: var(--warm-gray);">Every week, a guided 4-step walkthrough keeps the system trusted. Run <code style="color: var(--teal);">gtd review</code> and follow the prompts.</p>
-    <p class="text-center mb-12 max-w-xl mx-auto text-xs" style="color: var(--warm-gray);">Steps 0 and 3 integrate with the <strong>MiMo Code</strong> — spawning the <code style="color: var(--teal);">accountability-partner</code> and <code style="color: var(--teal);">gtd-brainstorm</code> skills for AI-powered review and ideation.</p>
+    <p class="text-center mb-12 max-w-xl mx-auto text-xs" style="color: var(--warm-gray);">Steps 0 and 3 integrate with <strong>Codex CLI</strong> — spawning the <code style="color: var(--teal);">accountability-partner</code> and <code style="color: var(--teal);">gtd-brainstorm</code> skills for AI-powered review and ideation.</p>
 
     <div class="grid md:grid-cols-4 gap-6">
       <div class="rounded-xl p-6 text-center" style="background: var(--paper); border-top: 3px solid var(--rust);">
         <div class="text-3xl font-display mb-3" style="color: var(--rust);">0</div>
         <h4 class="font-bold text-sm mb-2">Assessment</h4>
-        <p class="text-xs leading-relaxed" style="color: var(--warm-gray);">Read last week's board. See your accountability partner score. Press <code style="background:var(--cream);padding:1px 4px;border-radius:3px">p</code> to spawn MiMo Code <strong>accountability-partner</strong> skill for AI-powered performance feedback.</p>
+        <p class="text-xs leading-relaxed" style="color: var(--warm-gray);">Read last week's board. See your accountability partner score. Press <code style="background:var(--cream);padding:1px 4px;border-radius:3px">p</code> to spawn the Codex CLI <strong>accountability-partner</strong> skill for AI-powered performance feedback.</p>
       </div>
       <div class="rounded-xl p-6 text-center" style="background: var(--paper); border-top: 3px solid var(--rust);">
         <div class="text-3xl font-display mb-3" style="color: var(--rust);">1</div>
@@ -260,7 +260,7 @@
       <div class="rounded-xl p-6 text-center" style="background: var(--paper); border-top: 3px solid var(--teal);">
         <div class="text-3xl font-display mb-3" style="color: var(--teal);">3</div>
         <h4 class="font-bold text-sm mb-2">Get Creative</h4>
-        <p class="text-xs leading-relaxed" style="color: var(--warm-gray);">Brainstorm new ideas. Press <code style="background:var(--cream);padding:1px 4px;border-radius:3px">g</code> to spawn MiMo Code <strong>gtd-brainstorm</strong> skill and generate 30 fresh ideas tailored to your system.</p>
+        <p class="text-xs leading-relaxed" style="color: var(--warm-gray);">Brainstorm new ideas. Press <code style="background:var(--cream);padding:1px 4px;border-radius:3px">g</code> to spawn the Codex CLI <strong>gtd-brainstorm</strong> skill and generate 30 fresh ideas tailored to your system.</p>
       </div>
     </div>
 
@@ -297,6 +297,61 @@
 
         <defs><marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="none" stroke="#8a7e6e" stroke-width="1"/></marker></defs>
       </svg>
+    </div>
+  </div>
+</section>
+
+<!-- Codex Skills -->
+<section class="px-6 py-20">
+  <div class="max-w-5xl mx-auto">
+    <h2 class="font-display text-3xl md:text-4xl text-center mb-4">A Skill Is a Focused Review Partner</h2>
+    <p class="text-center mb-12 max-w-2xl mx-auto" style="color: var(--warm-gray);">The terminal does not hand your whole life to an agent. It starts one named Codex CLI skill inside the GTD data folder, with permission to update that workspace and nothing broader.</p>
+
+    <div class="grid md:grid-cols-2 gap-8 items-stretch">
+      <div class="rounded-xl p-7" style="background: var(--cream); border-left: 4px solid var(--teal);">
+        <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--teal);">Concrete launch</p>
+        <code class="block text-xs leading-relaxed p-4 rounded-lg break-words" style="background: var(--paper); color: var(--ink);">codex exec --sandbox workspace-write --skip-git-repo-check -C ~/data/gtd "$accountability-partner …"</code>
+        <p class="text-sm leading-relaxed mt-4" style="color: var(--warm-gray);"><strong style="color: var(--ink);">workspace-write</strong> means the skill can save the weekly board in <code>~/data/gtd</code>. It does not grant unrestricted access to the rest of the computer.</p>
+      </div>
+      <div class="rounded-xl p-7" style="background: var(--cream); border-left: 4px solid var(--rust);">
+        <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--rust);">Two focused jobs</p>
+        <ul class="space-y-4 text-sm leading-relaxed" style="color: var(--warm-gray);">
+          <li><strong style="color: var(--ink);">accountability-partner</strong> reads the latest board and recent weeks, then writes a score and grounded feedback through <code>gtd partner write</code>.</li>
+          <li><strong style="color: var(--ink);">gtd-brainstorm</strong> reads the GTD files and produces 30 fresh ideas tailored to the system.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="mt-10 rounded-xl p-6 md:p-8" style="background: var(--cream);">
+      <h3 class="text-sm font-bold uppercase tracking-widest text-center mb-6" style="color: var(--warm-gray);">The reusable mental model</h3>
+      <div class="grid gap-3 md:hidden text-center text-sm" style="color: var(--ink);">
+        <div class="rounded-lg p-3" style="background: var(--paper); border: 1px solid rgba(160,82,45,0.25);"><strong>gtd review</strong><br><span class="text-xs" style="color: var(--warm-gray);">Press p or g</span></div>
+        <div class="text-lg" style="color: var(--warm-gray);">↓</div>
+        <div class="rounded-lg p-3" style="background: var(--paper); border: 1px solid rgba(42,122,110,0.25);"><strong>Codex CLI</strong><br><span class="text-xs" style="color: var(--warm-gray);">Run the named skill with a scoped workspace</span></div>
+        <div class="text-lg" style="color: var(--warm-gray);">↓</div>
+        <div class="rounded-lg p-3" style="background: var(--paper); border: 1px solid rgba(160,82,45,0.25);"><strong>~/data/gtd</strong><br><span class="text-xs" style="color: var(--warm-gray);">The skill reads and updates Markdown here</span></div>
+        <div class="text-lg" style="color: var(--warm-gray);">↓</div>
+        <div class="rounded-lg p-3" style="background: var(--paper); border: 1px solid rgba(42,122,110,0.25);"><strong>Reloaded review</strong><br><span class="text-xs" style="color: var(--warm-gray);">The result stays editable and visible</span></div>
+      </div>
+      <svg viewBox="0 0 720 150" class="hidden w-full md:block" role="img" aria-label="Press a key in gtd review, Codex CLI runs the named skill in the GTD workspace, then the skill updates Markdown and the review reloads it.">
+        <rect x="16" y="42" width="140" height="66" rx="10" fill="#f5f0e8" stroke="#a0522d" stroke-width="2"/>
+        <text x="86" y="69" text-anchor="middle" dominant-baseline="middle" font-family="Instrument Serif" font-size="17" fill="#a0522d">gtd review</text>
+        <text x="86" y="91" text-anchor="middle" dominant-baseline="middle" font-family="Bricolage Grotesque" font-size="11" fill="#8a7e6e">press p or g</text>
+        <line x1="156" y1="75" x2="204" y2="75" stroke="#8a7e6e" stroke-width="2" marker-end="url(#codex-arrow)"/>
+        <rect x="204" y="42" width="150" height="66" rx="10" fill="#f5f0e8" stroke="#2a7a6e" stroke-width="2"/>
+        <text x="279" y="66" text-anchor="middle" dominant-baseline="middle" font-family="Instrument Serif" font-size="17" fill="#2a7a6e">Codex CLI</text>
+        <text x="279" y="90" text-anchor="middle" dominant-baseline="middle" font-family="Bricolage Grotesque" font-size="11" fill="#8a7e6e">named skill + scope</text>
+        <line x1="354" y1="75" x2="402" y2="75" stroke="#8a7e6e" stroke-width="2" marker-end="url(#codex-arrow)"/>
+        <rect x="402" y="42" width="142" height="66" rx="10" fill="#f5f0e8" stroke="#a0522d" stroke-width="2"/>
+        <text x="473" y="66" text-anchor="middle" dominant-baseline="middle" font-family="Instrument Serif" font-size="17" fill="#a0522d">GTD workspace</text>
+        <text x="473" y="90" text-anchor="middle" dominant-baseline="middle" font-family="Bricolage Grotesque" font-size="11" fill="#8a7e6e">~/data/gtd</text>
+        <line x1="544" y1="75" x2="592" y2="75" stroke="#8a7e6e" stroke-width="2" marker-end="url(#codex-arrow)"/>
+        <rect x="592" y="42" width="112" height="66" rx="10" fill="#f5f0e8" stroke="#2a7a6e" stroke-width="2"/>
+        <text x="648" y="66" text-anchor="middle" dominant-baseline="middle" font-family="Instrument Serif" font-size="17" fill="#2a7a6e">Markdown</text>
+        <text x="648" y="90" text-anchor="middle" dominant-baseline="middle" font-family="Bricolage Grotesque" font-size="11" fill="#8a7e6e">updated + reloaded</text>
+        <defs><marker id="codex-arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="none" stroke="#8a7e6e" stroke-width="1.2"/></marker></defs>
+      </svg>
+      <p class="text-center text-xs mt-4" style="color: var(--warm-gray);">Key → focused skill → scoped workspace → plain Markdown. The result stays visible, editable, and yours.</p>
     </div>
   </div>
 </section>

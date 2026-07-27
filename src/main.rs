@@ -38,7 +38,7 @@ enum Commands {
     Vision,
     /// View/edit areas of focus (H2)
     Areas,
-    /// Write accountability partner notes (used by mimo skill)
+    /// Write accountability partner notes (used by the Codex skill)
     Partner {
         #[command(subcommand)]
         action: PartnerAction,
