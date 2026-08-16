@@ -608,6 +608,18 @@ fn parse_vision_md(content: &str) -> Vision {
         }
 
         if let Some(heading) = trimmed.strip_prefix("## ") {
+            // Support a concise vision file such as:
+            //
+            // ## Vision
+            // - Financial health
+            // - Healthy
+            //
+            // The document heading is not itself a vision area; each top-level
+            // bullet is.  This also preserves the existing per-area format
+            // (where every `##` heading is an area) when a real area follows.
+            if heading.trim().eq_ignore_ascii_case("vision") && current_area.is_none() {
+                continue;
+            }
             if let Some(area) = current_area.take() {
                 vision.areas.push(area);
             }
@@ -636,6 +648,14 @@ fn parse_vision_md(content: &str) -> Vision {
                 } else {
                     area.picture_of_success.push(item.to_string());
                 }
+            } else {
+                // A top-level bullet in the concise format is a complete
+                // vision item, not a detail belonging to the preceding item.
+                vision.areas.push(VisionArea {
+                    category: item.to_string(),
+                    vision_text: String::new(),
+                    picture_of_success: Vec::new(),
+                });
             }
             continue;
         }
@@ -702,6 +722,7 @@ pub struct WeeklyBoard {
     pub score: Option<u8>,
     pub score_note: Option<String>,
     pub partner_notes: Option<String>,
+    pub coach_call: Option<String>,
     pub accomplishments: Vec<String>,
     pub struggles: Vec<String>,
 }
@@ -770,6 +791,12 @@ fn parse_markdown_board(content: &str) -> WeeklyBoard {
                     board.partner_notes = Some(notes_text);
                 }
             }
+            "Coach's Call" => {
+                let text = lines.join("\n").trim().to_string();
+                if !text.is_empty() {
+                    board.coach_call = Some(text);
+                }
+            }
             "Accomplishments" => {
                 for line in lines {
                     let trimmed = line.trim();
@@ -833,6 +860,13 @@ fn render_markdown_board(board: &WeeklyBoard, date_str: &str) -> String {
         out.push('\n');
     }
     out.push('\n');
+
+    // Coach's Call
+    if let Some(ref call) = board.coach_call {
+        out.push_str("## Coach's Call\n\n");
+        out.push_str(call);
+        out.push_str("\n\n");
+    }
 
     // Accomplishments
     out.push_str("## Accomplishments\n");
@@ -1241,4 +1275,28 @@ pub fn checklist_path(name: &str) -> PathBuf {
 
 pub fn brainstorm_path() -> PathBuf {
     data_dir().join("brainstorm.md")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_markdown_board;
+
+    #[test]
+    fn parses_coachs_call_as_a_dedicated_board_section() {
+        let board = parse_markdown_board(
+            "# Weekly Board — 2026-08-15\n\n\
+             ## Partner Notes\n\n\
+             ## Coach's Call\n\n\
+             You kept the important rhythm alive. Could you schedule the review for Saturday?\n\n\
+             ## Accomplishments\n\
+             - Biked\n",
+        );
+
+        assert_eq!(
+            board.coach_call.as_deref(),
+            Some("You kept the important rhythm alive. Could you schedule the review for Saturday?")
+        );
+        assert!(board.partner_notes.is_none());
+        assert_eq!(board.accomplishments, vec!["Biked"]);
+    }
 }

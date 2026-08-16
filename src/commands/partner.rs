@@ -13,8 +13,13 @@ pub fn run_write(date_str: &str, score: Option<u8>, notes: &str) -> io::Result<(
 
     // Normalize literal \n sequences into real newlines (agent prompts may pass them as strings)
     let normalized = notes.replace("\\n", "\n");
+    let coach_call = normalized
+        .trim()
+        .strip_prefix("## Coach's Call")
+        .unwrap_or(normalized.trim())
+        .trim();
     board.score = Some(score.unwrap_or(0));
-    board.partner_notes = Some(wrap_notes(normalized.trim(), 110));
+    board.coach_call = Some(wrap_notes(coach_call, 110));
 
     data::save_weekly_board(&board, date_str);
 

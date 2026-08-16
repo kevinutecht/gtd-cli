@@ -15,7 +15,6 @@ pub fn run() -> io::Result<()> {
     let inbox_items = load_inbox_open();
     let events = data::load_calendar();
     let agendas = data::load_agendas();
-    let waiting = data::load_waiting_for();
 
     // ── Purpose (H5) ────────────────────────────────────────
     if !profile.purpose.is_empty() {
@@ -30,7 +29,11 @@ pub fn run() -> io::Result<()> {
         println!("## Vision ({})", vision.time_horizon);
         println!();
         for area in &vision.areas {
-            println!("- **{}:** {}", area.category, area.vision_text);
+            if area.vision_text.is_empty() {
+                println!("- **{}**", area.category);
+            } else {
+                println!("- **{}:** {}", area.category, area.vision_text);
+            }
             for item in &area.picture_of_success {
                 println!("  - {}", item);
             }
@@ -74,41 +77,6 @@ pub fn run() -> io::Result<()> {
         }
     }
     println!();
-
-    // ── Projects (H1) ───────────────────────────────────────
-    // (Moved after Areas to follow the horizon flow: H5→H4→H3→H2→H1)
-    let active_projects: Vec<_> = projects.iter()
-        .filter(|p| !p.items.is_empty())
-        .collect();
-
-    if !active_projects.is_empty() {
-        println!("## Projects ({})", active_projects.len());
-        println!();
-        for proj in &active_projects {
-            if let Some(ref goal) = proj.goal {
-                println!("- {} → {}", proj.name, goal);
-            } else {
-                println!("- {} → ???", proj.name);
-            }
-            for item in &proj.items {
-                println!("  - {}", item);
-            }
-        }
-        println!();
-    }
-
-    // ── Waiting For ─────────────────────────────────────────
-    if !waiting.is_empty() {
-        println!("## Waiting For ({})", waiting.len());
-        println!();
-        for item in &waiting {
-            println!("- {}", item.name);
-            for subitem in &item.items {
-                println!("  - {}", subitem);
-            }
-        }
-        println!();
-    }
 
     // ── Agendas ─────────────────────────────────────────────
     if !agendas.is_empty() {
@@ -164,16 +132,24 @@ pub fn run() -> io::Result<()> {
         println!();
     }
 
-    // ── Accountability ──────────────────────────────────────
-    let accountability = load_latest_accountability();
-    if let Some(ref acc) = accountability {
-        println!("## Accountability (from {})", acc.date);
+    // ── Projects (H1) ───────────────────────────────────────
+    let active_projects: Vec<_> = projects.iter()
+        .filter(|p| !p.items.is_empty())
+        .collect();
+
+    if !active_projects.is_empty() {
+        println!("## Projects ({})", active_projects.len());
         println!();
-        println!("**Pattern to Watch:**");
-        println!("- {}", acc.pattern);
-        println!();
-        println!("**One Challenge:**");
-        println!("- {}", acc.challenge);
+        for proj in &active_projects {
+            if let Some(ref goal) = proj.goal {
+                println!("- {} → {}", proj.name, goal);
+            } else {
+                println!("- {} → ???", proj.name);
+            }
+            for item in &proj.items {
+                println!("  - {}", item);
+            }
+        }
         println!();
     }
 
@@ -188,78 +164,6 @@ pub fn run() -> io::Result<()> {
     }
 
     Ok(())
-}
-
-struct AccountabilityNote {
-    date: String,
-    pattern: String,
-    challenge: String,
-}
-
-fn load_latest_accountability() -> Option<AccountabilityNote> {
-    let weekly_dir = data::data_dir().join("weekly");
-    if !weekly_dir.exists() {
-        return None;
-    }
-
-    let mut entries: Vec<String> = std::fs::read_dir(&weekly_dir)
-        .ok()?
-        .filter_map(|e| e.ok())
-        .filter(|e| e.path().extension().is_some_and(|ext| ext == "md"))
-        .filter_map(|e| e.file_name().into_string().ok())
-        .filter(|name| name != "template.md")
-        .collect();
-
-    entries.sort();
-    entries.reverse();
-
-    for filename in &entries {
-        let filepath = weekly_dir.join(filename);
-        let content = match std::fs::read_to_string(&filepath) {
-            Ok(c) => c,
-            Err(_) => continue,
-        };
-
-        let pattern = extract_section(&content, "Pattern to Watch:");
-        let challenge = extract_section(&content, "One Challenge:");
-
-        if let (Some(pattern), Some(challenge)) = (pattern, challenge) {
-            let date = filename.trim_end_matches(".md").to_string();
-            return Some(AccountabilityNote { date, pattern, challenge });
-        }
-    }
-
-    None
-}
-
-fn extract_section(content: &str, header: &str) -> Option<String> {
-    let header_pos = content.find(header)?;
-    let after_header = &content[header_pos + header.len()..];
-
-    let mut lines = Vec::new();
-    for line in after_header.lines() {
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-            if !lines.is_empty() {
-                break;
-            }
-            continue;
-        }
-        if trimmed.starts_with("## ") {
-            break;
-        }
-        if let Some(rest) = trimmed.strip_prefix("- ") {
-            lines.push(rest.to_string());
-        } else {
-            lines.push(trimmed.to_string());
-        }
-    }
-
-    if lines.is_empty() {
-        None
-    } else {
-        Some(lines.join(" "))
-    }
 }
 
 fn load_inbox_open() -> Vec<String> {

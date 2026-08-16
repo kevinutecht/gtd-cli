@@ -49,7 +49,14 @@ pub fn build_altitudes_lines() -> Vec<(String, Color, bool)> {
         lines.push(("  No vision areas defined.".to_string(), Color::DarkGrey, false));
     } else {
         for area in &vision.areas {
+            if area.vision_text.is_empty() && area.picture_of_success.is_empty() {
+                lines.push((format!("  • {}", area.category), Color::White, false));
+                continue;
+            }
             lines.push((format!("  {}:", area.category), Color::Cyan, true));
+            if !area.vision_text.is_empty() {
+                lines.push((format!("    {}", area.vision_text), Color::White, false));
+            }
             if !area.picture_of_success.is_empty() {
                 for item in &area.picture_of_success {
                     lines.push((format!("    • {}", item), Color::White, false));

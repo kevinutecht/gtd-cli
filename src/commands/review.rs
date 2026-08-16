@@ -972,8 +972,15 @@ fn build_assessment_lines(
         }
     }
 
-    // Accountability partner notes
-    if let Some(ref notes) = board.partner_notes {
+    // Accountability partner's concise weekly call
+    if let Some(ref call) = board.coach_call {
+        lines.push((String::new(), ui::FG, false));
+        lines.push(("📞 Coach's Call".to_string(), ui::ACCENT, true));
+        for line in call.lines() {
+            push_styled_line(&mut lines, line);
+        }
+    // Legacy accountability-partner notes
+    } else if let Some(ref notes) = board.partner_notes {
         lines.push((String::new(), ui::FG, false));
         let score_str = board.score
             .map(|s| format!("Score: {}/10", s))
