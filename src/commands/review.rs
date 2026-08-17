@@ -180,14 +180,13 @@ impl AssessmentState {
         }
     }
 
-    fn reload_dates(&mut self) {
+    fn reload_dates(&mut self, selected_date: &str) {
         self.all_dates = data::list_weekly_board_dates();
-        // Keep same index if valid, otherwise go to last
-        if let Some(idx) = self.date_index {
-            if idx >= self.all_dates.len() {
-                self.date_index = if self.all_dates.is_empty() { None } else { Some(self.all_dates.len() - 1) };
-            }
-        }
+        self.date_index = self
+            .all_dates
+            .iter()
+            .position(|date| date == selected_date)
+            .or_else(|| self.all_dates.len().checked_sub(1));
     }
 
     fn current_date(&self) -> Option<&str> {
@@ -364,10 +363,10 @@ fn run_loop(
                         }
                     }
                     ui::Key::Down | ui::Key::Char('j') => {
-                        let (_, rows) = ui::terminal_size();
+                        let (cols, rows) = ui::terminal_size();
                         let board = asm.board().unwrap_or_default();
                         let profile = data::load_profile();
-                        let total_lines = build_assessment_lines(&profile, &board, rows).len() as u16;
+                        let total_lines = build_assessment_lines(&profile, &board, cols).len() as u16;
                         let max_scroll = total_lines.saturating_sub(rows.saturating_sub(3));
                         if asm.scroll < max_scroll {
                             asm.scroll = (asm.scroll + 3).min(max_scroll);
@@ -386,6 +385,7 @@ fn run_loop(
                         }
                     }
                     ui::Key::Char('p') => {
+                        let selected_date = asm.current_date().unwrap_or_default().to_string();
                         // Launch accountability partner skill via Codex
                         terminal::disable_raw_mode()?;
                         ui::reset_terminal(out)?;
@@ -393,6 +393,9 @@ fn run_loop(
                         out.flush()?;
                         let home = std::env::var("HOME").unwrap();
                         let gtd_data = format!("{}/data/gtd", home);
+                        let partner_prompt = format!(
+                            "$accountability-partner Review the weekly board dated {selected_date}. Read its reflections, accomplishments, and struggles; write the Coach's Call back to that same board date."
+                        );
                         let status = std::process::Command::new("codex")
                             .args([
                                 "exec",
@@ -401,7 +404,7 @@ fn run_loop(
                                 "--skip-git-repo-check",
                                 "-C",
                                 &gtd_data,
-                                "$accountability-partner Review my weekly performance.",
+                                &partner_prompt,
                             ])
                             .current_dir(&gtd_data)
                             .stdin(std::process::Stdio::inherit())
@@ -416,7 +419,7 @@ fn run_loop(
                         }
                         terminal::enable_raw_mode()?;
                         ui::hide_cursor(out)?;
-                        asm.reload_dates();
+                        asm.reload_dates(&selected_date);
                     }
                     ui::Key::Char(' ') => {
                         // Continue to step 1 (first GTD review step)
@@ -918,7 +921,7 @@ fn draw_summary_screen(out: &mut impl Write, summ: &SummaryState) -> io::Result<
 fn build_assessment_lines(
     profile: &data::Profile,
     board: &data::WeeklyBoard,
-    _cols: u16,
+    cols: u16,
 ) -> Vec<(String, Color, bool)> {
     let mut lines: Vec<(String, Color, bool)> = Vec::new();
 
@@ -938,7 +941,7 @@ fn build_assessment_lines(
         lines.push((String::new(), ui::FG, false));
         lines.push(("📞 Coach's Call".to_string(), ui::ACCENT, true));
         for line in call.lines() {
-            push_styled_line(&mut lines, line);
+            push_wrapped_styled_line(&mut lines, line, cols as usize);
         }
     // Legacy accountability-partner notes
     } else if let Some(ref notes) = board.partner_notes {
@@ -948,10 +951,10 @@ fn build_assessment_lines(
             .unwrap_or_else(|| "Partner Notes".to_string());
         lines.push((format!("\u{1f465} {}", score_str), ui::ACCENT, true));
         if let Some(ref note) = board.score_note {
-            lines.push((note.clone(), ui::FG, false));
+            push_wrapped_styled_line(&mut lines, note, cols as usize);
         }
         for line in notes.lines() {
-            push_styled_line(&mut lines, line);
+            push_wrapped_styled_line(&mut lines, line, cols as usize);
         }
     }
 
@@ -971,6 +974,36 @@ fn build_assessment_lines(
     if !board.struggles.is_empty() {
         lines.push(("Struggles".to_string(), ui::ERROR, true));
         for item in &board.struggles {
+            lines.push((format!("  \u{2022} {}", item), ui::FG, false));
+        }
+    }
+
+    lines.push((String::new(), ui::FG, false));
+    lines.push(("\u{1f4ad} Reflect on Performance".to_string(), ui::PURPLE, true));
+
+    lines.push(("What Gave Me Energy?".to_string(), ui::LINK, true));
+    if board.energy.is_empty() {
+        lines.push(("  — Add reflections with e to edit this weekly board.".to_string(), ui::C_DIM, false));
+    } else {
+        for item in &board.energy {
+            lines.push((format!("  \u{2022} {}", item), ui::FG, false));
+        }
+    }
+
+    lines.push(("What Mattered?".to_string(), ui::LINK, true));
+    if board.mattered.is_empty() {
+        lines.push(("  — What felt meaningful this week?".to_string(), ui::C_DIM, false));
+    } else {
+        for item in &board.mattered {
+            lines.push((format!("  \u{2022} {}", item), ui::FG, false));
+        }
+    }
+
+    lines.push(("What Did I Avoid?".to_string(), ui::ERROR, true));
+    if board.avoided.is_empty() {
+        lines.push(("  — What deserves an honest look?".to_string(), ui::C_DIM, false));
+    } else {
+        for item in &board.avoided {
             lines.push((format!("  \u{2022} {}", item), ui::FG, false));
         }
     }
@@ -1082,6 +1115,25 @@ fn open_board_editor(date_str: &str) -> io::Result<()> {
     let path = data::weekly_board_path(date_str);
     if !path.exists() {
         data::save_weekly_board(&data::WeeklyBoard::default(), date_str);
+    } else {
+        let mut content = std::fs::read_to_string(&path)?;
+        let mut added_section = false;
+        for heading in [
+            "What Gave Me Energy?",
+            "What Mattered?",
+            "What Did I Avoid?",
+        ] {
+            if !content.contains(&format!("## {}", heading)) {
+                if !content.ends_with('\n') {
+                    content.push('\n');
+                }
+                content.push_str(&format!("\n## {}\n\n", heading));
+                added_section = true;
+            }
+        }
+        if added_section {
+            std::fs::write(&path, content)?;
+        }
     }
     let editor = std::env::var("EDITOR").unwrap_or_else(|_| "vim".into());
     std::process::Command::new(&editor)
@@ -1226,7 +1278,7 @@ fn draw_step(
     let block_left = cols.saturating_sub(max_line_len) / 2;
     for (i, line) in desc_lines.iter().enumerate() {
         let r = desc_start + i as u16;
-        if r >= 12 { break; }
+        if r >= rows.saturating_sub(2) { break; }
         queue!(out, MoveTo(block_left, r))?;
         queue!(out, SetBackgroundColor(ui::BG), SetForegroundColor(ui::ACCENT))?;
         write!(out, "{}", line)?;
@@ -1235,7 +1287,7 @@ fn draw_step(
 
     if let Some(note) = notes.get(&step_index) {
         let note_row = desc_start + desc_lines.len() as u16;
-        if note_row < 13 {
+        if note_row < rows.saturating_sub(2) {
             queue!(out, MoveTo(block_left, note_row))?;
             queue!(out, SetBackgroundColor(ui::BG), SetForegroundColor(ui::ACCENT), SetAttribute(Attribute::Italic))?;
             write!(out, "{}", &format!("\u{1f4dd} {}", note))?;
@@ -1244,11 +1296,11 @@ fn draw_step(
     }
 
     if step.viewer.is_some() {
-        let viewer_start = 13u16;
+        let viewer_start = desc_start + desc_lines.len() as u16 + 1;
         let viewer_end = rows.saturating_sub(2);
-        let viewer_height = (viewer_end - viewer_start) as usize;
+        let viewer_height = viewer_end.saturating_sub(viewer_start) as usize;
 
-        if viewer_height > 3 {
+        if viewer_height >= 3 {
             queue!(out, MoveTo(0, viewer_start))?;
             queue!(out, SetBackgroundColor(ui::BG_LIGHT), SetForegroundColor(ui::BORDER))?;
             write!(out, "{}", "\u{2500}".repeat(cols as usize))?;
@@ -1896,6 +1948,90 @@ fn push_styled_line(out: &mut Vec<(String, Color, bool)>, line: &str) {
     push_inline_styled(out, "  ", trimmed);
 }
 
+fn push_wrapped_styled_line(out: &mut Vec<(String, Color, bool)>, line: &str, max_width: usize) {
+    let trimmed = line.trim_end();
+    if trimmed.is_empty() {
+        out.push((String::new(), ui::FG, false));
+        return;
+    }
+    if trimmed.starts_with("### ") || trimmed.starts_with("## ") {
+        push_styled_line(out, trimmed);
+        return;
+    }
+    if trimmed.starts_with("- ") || trimmed.starts_with("* ") {
+        push_wrapped_inline_styled(out, "  \u{2022} ", "    ", &trimmed[2..], max_width);
+        return;
+    }
+    push_wrapped_inline_styled(out, "  ", "  ", trimmed, max_width);
+}
+
+fn push_wrapped_inline_styled(
+    out: &mut Vec<(String, Color, bool)>,
+    first_prefix: &str,
+    continuation_prefix: &str,
+    text: &str,
+    max_width: usize,
+) {
+    let cleaned_text = text.replace("**", "");
+    let has_bold = text.contains("**");
+    let color = if has_bold { ui::FG_BRIGHT } else { ui::FG };
+    let bold = has_bold;
+    let first_width = UnicodeWidthStr::width(first_prefix);
+    let continuation_width = UnicodeWidthStr::width(continuation_prefix);
+
+    for (index, line) in wrap_display_text(&cleaned_text, max_width.saturating_sub(first_width).max(1))
+        .into_iter()
+        .enumerate()
+    {
+        let prefix = if index == 0 { first_prefix } else { continuation_prefix };
+        let available = max_width.saturating_sub(UnicodeWidthStr::width(prefix)).max(1);
+        if index == 0 || first_width == continuation_width {
+            out.push((format!("{}{}", prefix, line), color, bold));
+        } else {
+            for continuation in wrap_display_text(&line, available) {
+                out.push((format!("{}{}", prefix, continuation), color, bold));
+            }
+        }
+    }
+}
+
+fn wrap_display_text(text: &str, max_width: usize) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut current = String::new();
+
+    for word in text.split_whitespace() {
+        let separator = if current.is_empty() { "" } else { " " };
+        let candidate = format!("{}{}{}", current, separator, word);
+        if UnicodeWidthStr::width(candidate.as_str()) <= max_width {
+            current = candidate;
+            continue;
+        }
+
+        if !current.is_empty() {
+            lines.push(current);
+        }
+
+        let mut fragment = String::new();
+        for ch in word.chars() {
+            let width = unicode_width::UnicodeWidthChar::width(ch).unwrap_or(1);
+            if !fragment.is_empty() && UnicodeWidthStr::width(fragment.as_str()) + width > max_width {
+                lines.push(fragment);
+                fragment = String::new();
+            }
+            fragment.push(ch);
+        }
+        current = fragment;
+    }
+
+    if !current.is_empty() {
+        lines.push(current);
+    }
+    if lines.is_empty() {
+        lines.push(String::new());
+    }
+    lines
+}
+
 fn push_inline_styled(out: &mut Vec<(String, Color, bool)>, prefix: &str, text: &str) {
     let cleaned_text = text.replace("**", "");
     let has_bold = text.contains("**");
@@ -1903,4 +2039,18 @@ fn push_inline_styled(out: &mut Vec<(String, Color, bool)>, prefix: &str, text: 
     let color = if has_bold { ui::FG_BRIGHT } else { ui::FG };
     let bold = has_bold;
     out.push((display, color, bold));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::wrap_display_text;
+    use unicode_width::UnicodeWidthStr;
+
+    #[test]
+    fn wraps_partner_text_without_exceeding_the_terminal_width() {
+        let lines = wrap_display_text("A long Coach's Call should remain fully readable.", 16);
+
+        assert_eq!(lines.join(" "), "A long Coach's Call should remain fully readable.");
+        assert!(lines.iter().all(|line| UnicodeWidthStr::width(line.as_str()) <= 16));
+    }
 }

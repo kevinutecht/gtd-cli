@@ -241,7 +241,12 @@ pub fn review_steps() -> Vec<ReviewStep> {
                    \u{2022} Is each project still active and relevant?\n\
                    \u{2022} Does each have a clearly defined next action?\n\
                    \u{2022} Any projects to mark complete?\n\
-                   \u{2022} Any new projects to add?",
+                   \u{2022} Any new projects to add?\n\n\
+                   Make the Week Matter — choose:\n\
+                   \u{2022} One meaningful outcome\n\
+                   \u{2022} One energy-protecting practice\n\
+                   \u{2022} One person or contribution to prioritize\n\
+                   \u{2022} One courageous action to avoid postponing",
             viewer: Some(ReviewViewer::Projects),
         },
         ReviewStep {
@@ -725,6 +730,9 @@ pub struct WeeklyBoard {
     pub coach_call: Option<String>,
     pub accomplishments: Vec<String>,
     pub struggles: Vec<String>,
+    pub energy: Vec<String>,
+    pub mattered: Vec<String>,
+    pub avoided: Vec<String>,
 }
 
 pub fn weekly_dir() -> PathBuf {
@@ -813,6 +821,30 @@ fn parse_markdown_board(content: &str) -> WeeklyBoard {
                     }
                 }
             }
+            "What Gave Me Energy?" => {
+                for line in lines {
+                    let trimmed = line.trim();
+                    if let Some(item) = trimmed.strip_prefix("- ") {
+                        board.energy.push(item.to_string());
+                    }
+                }
+            }
+            "What Mattered?" => {
+                for line in lines {
+                    let trimmed = line.trim();
+                    if let Some(item) = trimmed.strip_prefix("- ") {
+                        board.mattered.push(item.to_string());
+                    }
+                }
+            }
+            "What Did I Avoid?" => {
+                for line in lines {
+                    let trimmed = line.trim();
+                    if let Some(item) = trimmed.strip_prefix("- ") {
+                        board.avoided.push(item.to_string());
+                    }
+                }
+            }
             _ => {}
         }
     }
@@ -887,6 +919,25 @@ fn render_markdown_board(board: &WeeklyBoard, date_str: &str) -> String {
         for item in &board.struggles {
             out.push_str(&format!("- {}\n", item));
         }
+    }
+    out.push('\n');
+
+    // Reflection
+    out.push_str("## What Gave Me Energy?\n");
+    for item in &board.energy {
+        out.push_str(&format!("- {}\n", item));
+    }
+    out.push('\n');
+
+    out.push_str("## What Mattered?\n");
+    for item in &board.mattered {
+        out.push_str(&format!("- {}\n", item));
+    }
+    out.push('\n');
+
+    out.push_str("## What Did I Avoid?\n");
+    for item in &board.avoided {
+        out.push_str(&format!("- {}\n", item));
     }
     out.push('\n');
 
@@ -1289,7 +1340,13 @@ mod tests {
              ## Coach's Call\n\n\
              You kept the important rhythm alive. Could you schedule the review for Saturday?\n\n\
              ## Accomplishments\n\
-             - Biked\n",
+             - Biked\n\n\
+             ## What Gave Me Energy?\n\
+             - Biking outdoors\n\n\
+             ## What Mattered?\n\
+             - Time with family\n\n\
+             ## What Did I Avoid?\n\
+             - Starting the weekly review\n",
         );
 
         assert_eq!(
@@ -1298,5 +1355,8 @@ mod tests {
         );
         assert!(board.partner_notes.is_none());
         assert_eq!(board.accomplishments, vec!["Biked"]);
+        assert_eq!(board.energy, vec!["Biking outdoors"]);
+        assert_eq!(board.mattered, vec!["Time with family"]);
+        assert_eq!(board.avoided, vec!["Starting the weekly review"]);
     }
 }
