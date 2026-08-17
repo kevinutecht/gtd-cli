@@ -769,6 +769,20 @@ fn build_summary_lines() -> Vec<(String, Color, bool)> {
         lines.push((String::new(), ui::FG, false));
     }
 
+    // Keep the latest coaching feedback front and center when a review starts.
+    // A more recent board may not have a call yet, so search backward for the
+    // most recent board that does.
+    if let Some((date, call)) = dates.iter().rev().find_map(|date| {
+        let board = data::load_weekly_board(date);
+        board.coach_call.map(|call| (date, call))
+    }) {
+        lines.push((format!("📞 Coach's Call — {}", date), ui::ACCENT, true));
+        for line in call.lines() {
+            push_styled_line(&mut lines, line);
+        }
+        lines.push((String::new(), ui::FG, false));
+    }
+
     // ── Horizons ───────────────────────────────────────────────────────
     lines.push((divider_line("Horizons"), ui::ACCENT_SOFT, false));
 
@@ -835,60 +849,7 @@ fn build_summary_lines() -> Vec<(String, Color, bool)> {
 
     lines.push((String::new(), ui::FG, false));
 
-    // ── Recent Performance ─────────────────────────────────────────────
-    lines.push((divider_line("Recent Performance"), ui::ACCENT_SOFT, false));
-
-    if let Some(latest_date) = dates.last() {
-        let board = data::load_weekly_board(latest_date);
-        if let Some(score) = board.score {
-            let note = board.score_note.as_deref().unwrap_or("");
-            let truncated = if note.len() > 50 { format!("{}...", &note[..47]) } else { note.to_string() };
-            lines.push((format!("  Latest Score        {}/10 \u{2014} {}", score, truncated), ui::ACCENT, false));
-        } else {
-            lines.push(("  Latest Score        no score".to_string(), ui::C_DIM, false));
-        }
-
-        // Review streak
-        let (total, streak) = compute_review_streak(&dates);
-        if total > 0 {
-            lines.push((format!("  Reviews Completed   {} total ({} week streak)", total, streak), ui::FG, false));
-        }
-    } else {
-        lines.push(("  Latest Score        no boards yet".to_string(), ui::C_DIM, false));
-    }
-
     lines
-}
-
-fn compute_review_streak(dates: &[String]) -> (usize, usize) {
-    if dates.is_empty() {
-        return (0, 0);
-    }
-
-    let total = dates.len();
-    let mut streak = 1usize;
-
-    // Walk backward from the most recent, counting consecutive weeks
-    for i in (0..dates.len() - 1).rev() {
-        if let (Some(curr), Some(prev)) = (dates.get(i + 1), dates.get(i)) {
-            // Parse dates and check if they're ~7 days apart
-            if let (Ok(c), Ok(p)) = (
-                chrono::NaiveDate::parse_from_str(curr, "%Y-%m-%d"),
-                chrono::NaiveDate::parse_from_str(prev, "%Y-%m-%d"),
-            ) {
-                let diff = (c - p).num_days();
-                if (5..=9).contains(&diff) { // Allow 5-9 days for weekly cadence
-                    streak += 1;
-                } else {
-                    break;
-                }
-            } else {
-                break;
-            }
-        }
-    }
-
-    (total, streak)
 }
 
 fn draw_summary_screen(out: &mut impl Write, summ: &SummaryState) -> io::Result<()> {
