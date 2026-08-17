@@ -284,7 +284,7 @@ pub fn review_steps() -> Vec<ReviewStep> {
             desc: "Review your brainstorm ideas and wild thoughts.\n\
                    \u{2022} What ideas are worth pursuing?\n\
                    \u{2022} Any patterns in what you're avoiding?\n\
-                   \u{2022} Press 'b' to brainstorm 30 new ideas with AI",
+                   \u{2022} Press 'b' to brainstorm 10 new ideas with AI",
             viewer: Some(ReviewViewer::Brainstorm),
         },
     ]

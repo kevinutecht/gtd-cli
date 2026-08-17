@@ -610,7 +610,7 @@ fn run_loop(
                         "--skip-git-repo-check",
                         "-C",
                         &gtd_data,
-                        "$gtd-brainstorm Brainstorm 30 new ideas for my GTD system.",
+                        "$gtd-brainstorm Brainstorm 10 new ideas for my GTD system.",
                     ])
                     .current_dir(&gtd_data)
                     .stdin(std::process::Stdio::inherit())
@@ -995,6 +995,8 @@ fn draw_assessment(out: &mut impl Write, asm: &AssessmentState) -> io::Result<()
         let help_parts = vec![
             (" p ", ui::ACCENT, true),
             (" partner ", ui::C_DIM, false),
+            (" c ", ui::ACCENT, true),
+            (" capture ", ui::C_DIM, false),
             (" q ", ui::ERROR, true),
             (" quit ", ui::C_DIM, false),
         ];
@@ -1359,6 +1361,7 @@ fn draw_step(
     } else {
         vec![
             (" SPACE/b ", ui::ACCENT, true), (" nav ", ui::C_DIM, false),
+            (" c ", ui::ACCENT, true), (" capture ", ui::C_DIM, false),
             (" q ", ui::ERROR, true), (" quit ", ui::C_DIM, false),
         ]
     };
@@ -1389,6 +1392,7 @@ fn draw_summary(out: &mut impl Write, steps: &[data::ReviewStep], notes: &HashMa
     }
 
     let help_parts = vec![
+        (" c ", ui::ACCENT, true), (" capture ", ui::C_DIM, false),
         (" q ", ui::ERROR, true), (" quit ", ui::C_DIM, false),
     ];
     ui::draw_help_bar(out, &help_parts)?;
