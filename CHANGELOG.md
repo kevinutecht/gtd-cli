@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Changed
+- Replaced external AI skill spawning with local `llama-agent` prompts backed by an open-source model.
+- Accountability and brainstorming prompts now run inside the Rust TUI with configurable model settings.
+
 ## [0.1.1] - 2026-07-03
 
 ### Changed

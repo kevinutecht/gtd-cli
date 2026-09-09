@@ -17,6 +17,7 @@ use chrono::Datelike;
 use crate::data;
 use crate::ui;
 use crate::commands::altitudes;
+use crate::commands::partner;
 use unicode_width::UnicodeWidthStr;
 
 // ── Viewer states ──────────────────────────────────────────────────────
@@ -386,36 +387,22 @@ fn run_loop(
                     }
                     ui::Key::Char('p') => {
                         let selected_date = asm.current_date().unwrap_or_default().to_string();
-                        // Launch accountability partner skill via Codex
+                        // Generate the accountability call locally with llama-agent.
                         terminal::disable_raw_mode()?;
                         ui::reset_terminal(out)?;
-                        println!("\n  Running skill <accountability-partner>... please wait.\n");
+                        println!("\n  Running local accountability partner... please wait.\n");
                         out.flush()?;
-                        let home = std::env::var("HOME").unwrap();
-                        let gtd_data = format!("{}/data/gtd", home);
-                        let partner_prompt = format!(
-                            "$accountability-partner Review the weekly board dated {selected_date}. Read its reflections, accomplishments, and struggles; write the Coach's Call back to that same board date."
-                        );
-                        let status = std::process::Command::new("codex")
-                            .args([
-                                "exec",
-                                "--sandbox",
-                                "workspace-write",
-                                "--skip-git-repo-check",
-                                "-C",
-                                &gtd_data,
-                                &partner_prompt,
-                            ])
-                            .current_dir(&gtd_data)
-                            .stdin(std::process::Stdio::inherit())
-                            .stdout(std::process::Stdio::inherit())
-                            .stderr(std::process::Stdio::inherit())
-                            .status();
-                        if let Err(e) = status {
-                            eprintln!("Failed to launch Codex: {}", e);
-                            eprintln!("Press Enter to continue...");
-                            let mut buf = String::new();
-                            std::io::stdin().read_line(&mut buf).ok();
+                        match generate_partner_call(&selected_date) {
+                            Ok(()) => println!(
+                                "Local Coach's Call written to {}.",
+                                data::weekly_board_path(&selected_date).display()
+                            ),
+                            Err(e) => {
+                                eprintln!("Local accountability partner failed: {}", e);
+                                eprintln!("Press Enter to continue...");
+                                let mut buf = String::new();
+                                std::io::stdin().read_line(&mut buf).ok();
+                            }
                         }
                         terminal::enable_raw_mode()?;
                         ui::hide_cursor(out)?;
@@ -598,30 +585,13 @@ fn run_loop(
                 auto_scroll_brainstorm(bs);
             }
             ui::Key::Char('g') if brainstorm_state.is_some() => {
-                // Launch brainstorm skill via Codex
+                // Generate brainstorm ideas locally with llama-agent.
                 terminal::disable_raw_mode()?;
                 ui::reset_terminal(out)?;
-                println!("\n  Running skill <gtd-brainstorm>... please wait.\n");
+                println!("\n  Running local brainstorm... please wait.\n");
                 out.flush()?;
-                let home = std::env::var("HOME").unwrap();
-                let gtd_data = format!("{}/data/gtd", home);
-                let status = std::process::Command::new("codex")
-                    .args([
-                        "exec",
-                        "--sandbox",
-                        "workspace-write",
-                        "--skip-git-repo-check",
-                        "-C",
-                        &gtd_data,
-                        "$gtd-brainstorm Brainstorm 10 new ideas for my GTD system.",
-                    ])
-                    .current_dir(&gtd_data)
-                    .stdin(std::process::Stdio::inherit())
-                    .stdout(std::process::Stdio::inherit())
-                    .stderr(std::process::Stdio::inherit())
-                    .status();
-                if let Err(e) = status {
-                    eprintln!("Failed to launch Codex: {}", e);
+                if let Err(e) = generate_brainstorm() {
+                    eprintln!("Local brainstorm failed: {}", e);
                     eprintln!("Press Enter to continue...");
                     let mut buf = String::new();
                     std::io::stdin().read_line(&mut buf).ok();
@@ -1140,6 +1110,305 @@ fn open_board_editor(date_str: &str) -> io::Result<()> {
         .arg(&path)
         .status()?;
     Ok(())
+}
+
+// ── Local AI generation ───────────────────────────────────────────────
+
+fn generate_partner_call(date: &str) -> Result<(), String> {
+    let gtd_dir = data::data_dir();
+    let board_path = data::weekly_board_path(date);
+    if !board_path.exists() {
+        return Err(format!("weekly board not found: {}", board_path.display()));
+    }
+
+    let mut prompt = String::from(
+        "You are a thoughtful accountability partner. Review the supplied GTD data and produce a concise\n\
+         Coach's Call grounded only in that data. Do not claim an unlisted recurring habit was missed. Treat\n\
+         struggles as meaningful, but be candid without shaming. Check earlier Coach's Calls for intentional\n\
+         system changes before calling a pattern a lapse.\n\n\
+         Evaluate, where supported by the data: clarity, energy, necessity, productivity, influence, and courage.\n\
+         Begin with one specific win that mattered. Name the most important pattern, avoidance, or opportunity.\n\
+         End with one small, specific commitment for the coming week as a question the user can answer yes to.\n\n\
+         Your Coach's Call must be 90–160 words; target 110–140 words and never exceed 160. Keep it plainspoken,\n\
+         with no bullets, labels, score, recap, or extra\n\
+         headings. Return only these two fields in this exact syntax: <SCORE>number</SCORE>, followed by\n\
+         <COACH_CALL> containing a note beginning with the heading ## Coach's Call and then </COACH_CALL>.\n\
+         Do not copy instructions, examples, brackets, or text from this prompt into the note.\n",
+    );
+    append_prompt_file(&mut prompt, &format!("CURRENT WEEKLY BOARD ({date})"), &board_path);
+    for (index, path) in weekly_boards(&gtd_dir)
+        .into_iter()
+        .filter(|path| path != &board_path)
+        .take(3)
+        .enumerate()
+    {
+        append_prompt_file(&mut prompt, &format!("PRIOR WEEKLY BOARD {}", index + 1), &path);
+    }
+    for (title, filename) in [
+        ("PURPOSE", "purpose.md"),
+        ("VISION", "vision.md"),
+        ("AREAS", "areas.md"),
+        ("GOALS", "goals.md"),
+        ("PROJECTS", "projects.md"),
+    ] {
+        append_prompt_file(&mut prompt, title, &gtd_dir.join(filename));
+    }
+    prompt.push_str(
+        "\n===== FINAL TASK =====\nGenerate the answer now. Write a 110–140 word Coach's Call (hard maximum 160 words).\nOutput only the SCORE and COACH_CALL tagged fields requested above.\n",
+    );
+
+    let response = run_llama(&prompt, 400, "0.3")?;
+    let score = extract_score(&response)
+        .filter(|score| (1..=10).contains(score))
+        .ok_or_else(|| {
+            let excerpt = response.lines().rev().take(12).collect::<Vec<_>>().into_iter().rev().collect::<Vec<_>>().join(" ");
+            format!("model did not return a valid score (response ending: {excerpt})")
+        })?;
+    let mut coach_call = extract_coach_call(&response)
+        .ok_or_else(|| "model did not return a Coach's Call (expected COACH_CALL tags or ## Coach's Call heading)".to_string())?;
+    let mut words = coach_call
+        .strip_prefix("## Coach's Call")
+        .unwrap_or(&coach_call)
+        .split_whitespace()
+        .count();
+    if words > 140 {
+        let repair_prompt = format!(
+            "Rewrite this Coach's Call to 110–140 words, hard maximum 160. Preserve the specific facts,\n\
+             keep the closing commitment question, and return only a Markdown heading ## Coach's Call\n\
+             followed by the rewritten note.\n\nDRAFT:\n{coach_call}"
+        );
+        if let Ok(repaired_response) = run_llama(&repair_prompt, 300, "0.2") {
+            if let Some(repaired) = extract_coach_call(&repaired_response) {
+                coach_call = repaired;
+                words = coach_call
+                    .strip_prefix("## Coach's Call")
+                    .unwrap_or(&coach_call)
+                    .split_whitespace()
+                    .count();
+            }
+        }
+    }
+    if coach_call.contains("[Write the actual 90–140 word Coach's Call here.]")
+        || coach_call.contains("Your 90–140 word note here.")
+    {
+        return Err("model copied the Coach's Call placeholder instead of generating a note".to_string());
+    }
+    if !(90..=160).contains(&words) {
+        return Err(format!(
+            "Coach's Call has {words} words; expected 90–160. Model returned: {coach_call}"
+        ));
+    }
+    partner::run_write(date, Some(score), &coach_call)
+        .map_err(|error| format!("could not save Coach's Call: {error}"))?;
+    let saved = data::load_weekly_board(date);
+    if saved.score != Some(score) || saved.coach_call.is_none() {
+        return Err(format!(
+            "write verification failed for {} (score present: {}, Coach's Call present: {})",
+            data::weekly_board_path(date).display(),
+            saved.score == Some(score),
+            saved.coach_call.is_some()
+        ));
+    }
+    Ok(())
+}
+
+fn generate_brainstorm() -> Result<(), String> {
+    let gtd_dir = data::data_dir();
+    let brainstorm_path = data::brainstorm_path();
+    let today = chrono::Local::now().format("%Y-%m-%d");
+    let mut prompt = format!(
+        "You are a thoughtful GTD brainstorming partner. Generate exactly 10 new ideas grounded in the\n\
+         supplied GTD data. Look for gaps, momentum, stalled commitments, and useful cross-pollination.\n\
+         Favor ideas that fit the user's stated values, resources, interests, and available time.\n\n\
+         Return only a plain Markdown list, without commentary, category headings, or code fences. Generate\n\
+         exactly 10 new ideas. Every idea must be one concise line beginning with '- [ ]'.\n\n\
+         # Brainstorm\n\n\
+         *Generated: {today}*\n\n\
+         - [ ] idea one\n\
+         - [ ] idea two\n\n\
+         Make each idea concrete and specific to the user's actual data. Do not duplicate existing ideas.\n"
+    );
+    for (title, filename) in [
+        ("PURPOSE", "purpose.md"), ("VISION", "vision.md"), ("AREAS", "areas.md"),
+        ("GOALS", "goals.md"), ("PROJECTS", "projects.md"), ("INBOX", "inbox.md"),
+        ("CALENDAR", "calendar.md"), ("WAITING FOR", "waiting-for.md"),
+        ("AGENDAS", "agendas.md"), ("SOMEDAY MAYBE", "someday-maybe.md"),
+        ("MORNING", "morning.md"), ("EVENING", "evening.md"),
+        ("TRIGGER LIST", "triggerlist.md"),
+    ] {
+        append_prompt_file(&mut prompt, title, &gtd_dir.join(filename));
+    }
+    append_prompt_file(&mut prompt, "EXISTING BRAINSTORM", &brainstorm_path);
+    for path in weekly_boards(&gtd_dir).into_iter().take(4) {
+        let name = path.file_stem().and_then(|name| name.to_str()).unwrap_or("unknown");
+        append_prompt_file(&mut prompt, &format!("WEEKLY BOARD {name}"), &path);
+    }
+    prompt.push_str(
+        "\n===== FINAL TASK =====\nNow output '# Brainstorm' followed by exactly 10 concise '- [ ]' idea lines and nothing else.\n",
+    );
+
+    let response = run_llama(&prompt, 2400, "0.7")?;
+    let brainstorm = extract_brainstorm_list(&response)?;
+    std::fs::write(&brainstorm_path, brainstorm)
+        .map_err(|error| format!("could not write {}: {error}", brainstorm_path.display()))
+}
+
+fn append_prompt_file(prompt: &mut String, title: &str, path: &std::path::Path) {
+    prompt.push_str(&format!("\n===== {title} =====\n"));
+    match std::fs::read_to_string(path) {
+        Ok(contents) => prompt.push_str(&contents),
+        Err(_) => prompt.push_str("[Not present]\n"),
+    }
+}
+
+fn weekly_boards(gtd_dir: &std::path::Path) -> Vec<std::path::PathBuf> {
+    let mut boards = std::fs::read_dir(gtd_dir.join("weekly"))
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| path.extension().is_some_and(|extension| extension == "md"))
+        .collect::<Vec<_>>();
+    boards.sort_by(|left, right| right.file_name().cmp(&left.file_name()));
+    boards
+}
+
+fn run_llama(prompt: &str, tokens: usize, temperature: &str) -> Result<String, String> {
+    let llama_cli = std::env::var("LLAMA_CLI").unwrap_or_else(|_| "llama-agent".to_string());
+    let llama_model = std::env::var("LLAMA_MODEL")
+        .map_err(|_| "LLAMA_MODEL is not set; configure it with the path to an instruct-model .gguf file".to_string())?;
+    let llama_context = std::env::var("LLAMA_CONTEXT").unwrap_or_else(|_| "16384".to_string());
+    let prompt_path = std::env::temp_dir().join(format!(
+        "gtd-cli-llama-{}-{}.txt",
+        std::process::id(),
+        chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default(),
+    ));
+    std::fs::write(&prompt_path, prompt)
+        .map_err(|error| format!("could not create temporary prompt: {error}"))?;
+    let result = std::process::Command::new(&llama_cli)
+        .args(["-m", &llama_model, "-f"])
+        .arg(&prompt_path)
+        .args([
+            "-c",
+            &llama_context,
+            "-n",
+            &tokens.to_string(),
+            "--temp",
+            temperature,
+            "--no-display-prompt",
+            "--single-turn",
+            "--simple-io",
+            "--reasoning",
+            "off",
+            "--no-session",
+            "--no-skills",
+            "--no-mcp",
+            "--no-agents-md",
+            "--no-compaction",
+            "--max-iterations",
+            "1",
+        ])
+        .stderr(std::process::Stdio::inherit())
+        .output();
+    let _ = std::fs::remove_file(&prompt_path);
+    let output = result.map_err(|error| format!("could not launch llama-agent ({llama_cli}): {error}"))?;
+    if !output.status.success() {
+        return Err(format!("llama-agent exited with {}", output.status));
+    }
+    String::from_utf8(output.stdout).map_err(|error| format!("llama-agent returned invalid UTF-8: {error}"))
+}
+
+fn tag_contents<'a>(response: &'a str, tag: &str) -> Option<&'a str> {
+    let opening = format!("<{tag}>");
+    let closing = format!("</{tag}>");
+    response.split_once(&opening)?.1.split_once(&closing).map(|(contents, _)| contents)
+}
+
+fn extract_score(response: &str) -> Option<u8> {
+    if let Some(score) = tag_contents(response, "SCORE")
+        .and_then(|value| value.trim().parse::<u8>().ok())
+    {
+        return Some(score);
+    }
+    for line in response.lines().rev() {
+        let upper = line.to_ascii_uppercase();
+        if let Some(position) = upper.find("SCORE") {
+            let suffix = &line[position + "SCORE".len()..];
+            let digits = suffix.trim_start_matches(|character: char| {
+                character == ':' || character == '-' || character == '=' || character.is_whitespace()
+            });
+            let number = digits.chars().take_while(|character| character.is_ascii_digit()).collect::<String>();
+            if let Ok(score) = number.parse::<u8>() {
+                return Some(score);
+            }
+        }
+    }
+    None
+}
+
+fn extract_coach_call(response: &str) -> Option<String> {
+    if let Some(note) = tag_contents(response, "COACH_CALL")
+        .map(str::trim)
+        .filter(|note| note.starts_with("## Coach's Call"))
+    {
+        return Some(clean_agent_footer(note));
+    }
+
+    // Small local models sometimes omit the XML wrapper but return the requested
+    // Markdown heading. Use the final occurrence so a heading echoed from the
+    // supplied prompt does not win over the generated note.
+    let heading = "## Coach's Call";
+    let start = response.rfind(heading)?;
+    let mut note = response[start..].trim().to_string();
+    if let Some(end) = note.find("\n[Completed in ") {
+        note.truncate(end);
+    }
+    if let Some(end) = note.find("\n[Stopped:") {
+        note.truncate(end);
+    }
+    let note = clean_agent_footer(note.trim());
+    (!note.is_empty()).then_some(note)
+}
+
+fn clean_agent_footer(note: &str) -> String {
+    let completed = note.find("[Completed in ");
+    let ansi_completed = note.find("\u{1b}[35m[Completed in ");
+    let end = ansi_completed.or(completed).unwrap_or(note.len());
+    note[..end]
+        .replace("</COACH_CALL>", "")
+        .trim_end_matches("Exiting...")
+        .trim()
+        .to_string()
+}
+
+fn extract_brainstorm_list(response: &str) -> Result<String, String> {
+    let heading = "# Brainstorm\n";
+    let start = response
+        .rfind(heading)
+        .ok_or_else(|| "model response is missing the # Brainstorm heading".to_string())?;
+    let mut ideas = Vec::new();
+    for line in response[start + heading.len()..].lines() {
+        if line.contains("[Completed in ") || line.contains("Exiting...") {
+            break;
+        }
+        let trimmed = line.trim();
+        let text = trimmed
+            .strip_prefix("- [ ]")
+            .map(str::trim)
+            .filter(|text| !text.is_empty());
+        if let Some(text) = text {
+            let wrapped = wrap_display_text(text, 104);
+            ideas.push(format!("- [ ] {}", wrapped[0]));
+            for continuation in wrapped.iter().skip(1) {
+                ideas.push(format!("      {continuation}"));
+            }
+        }
+    }
+    if ideas.is_empty() {
+        return Err("model returned no brainstorm list items".to_string());
+    }
+    let date = chrono::Local::now().format("%Y-%m-%d");
+    Ok(format!("# Brainstorm\n\n*Generated: {date}*\n\n{}\n", ideas.join("\n")))
 }
 
 // ── Step drawing (steps 1+) ───────────────────────────────────────────
@@ -2043,7 +2312,7 @@ fn push_inline_styled(out: &mut Vec<(String, Color, bool)>, prefix: &str, text: 
 
 #[cfg(test)]
 mod tests {
-    use super::wrap_display_text;
+    use super::{extract_brainstorm_list, wrap_display_text};
     use unicode_width::UnicodeWidthStr;
 
     #[test]
@@ -2052,5 +2321,15 @@ mod tests {
 
         assert_eq!(lines.join(" "), "A long Coach's Call should remain fully readable.");
         assert!(lines.iter().all(|line| UnicodeWidthStr::width(line.as_str()) <= 16));
+    }
+
+    #[test]
+    fn strips_llama_agent_completion_footer_from_brainstorm() {
+        let response = "agent startup\n# Brainstorm\n\n## Wild Cards\n\n- [ ] Try a trail\n\n[Completed in 1 iteration(s)]\n\nExiting...\n";
+        let markdown = extract_brainstorm_list(response).unwrap();
+
+        assert!(markdown.starts_with("# Brainstorm"));
+        assert!(!markdown.contains("[Completed in"));
+        assert!(!markdown.contains("Exiting..."));
     }
 }

@@ -1,5 +1,5 @@
 // Partner — write accountability partner notes into a weekly board
-// Called by Codex's accountability-partner skill
+// Called by the local AI accountability workflow
 
 use std::io;
 
