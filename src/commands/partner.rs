@@ -18,7 +18,9 @@ pub fn run_write(date_str: &str, score: Option<u8>, notes: &str) -> io::Result<(
         .strip_prefix("## Coach's Call")
         .unwrap_or(normalized.trim())
         .trim();
-    board.score = Some(score.unwrap_or(0));
+    if let Some(score) = score {
+        board.score = Some(score);
+    }
     board.coach_call = Some(wrap_notes(coach_call, 110));
 
     data::save_weekly_board(&board, date_str);

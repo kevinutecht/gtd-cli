@@ -1131,19 +1131,19 @@ fn generate_partner_call(date: &str) -> Result<(), String> {
          End with one small, specific commitment for the coming week as a question the user can answer yes to.\n\n\
          Your Coach's Call must be 90–160 words; target 110–140 words and never exceed 160. Keep it plainspoken,\n\
          with no bullets, labels, score, recap, or extra\n\
-         headings. Return only these two fields in this exact syntax: <SCORE>number</SCORE>, followed by\n\
-         <COACH_CALL> containing a note beginning with the heading ## Coach's Call and then </COACH_CALL>.\n\
+         headings. Return only a <COACH_CALL> field containing a note beginning with the heading\n\
+         ## Coach's Call and then </COACH_CALL>. Do not produce a score or any other field.\n\
          Do not copy instructions, examples, brackets, or text from this prompt into the note.\n",
     );
-    append_prompt_file(&mut prompt, &format!("CURRENT WEEKLY BOARD ({date})"), &board_path);
     for (index, path) in weekly_boards(&gtd_dir)
         .into_iter()
         .filter(|path| path != &board_path)
         .take(3)
         .enumerate()
     {
-        append_prompt_file(&mut prompt, &format!("PRIOR WEEKLY BOARD {}", index + 1), &path);
+        append_weekly_board_context(&mut prompt, &format!("PRIOR WEEKLY BOARD {}", index + 1), &path);
     }
+    append_weekly_board_context(&mut prompt, &format!("CURRENT WEEKLY BOARD ({date})"), &board_path);
     for (title, filename) in [
         ("PURPOSE", "purpose.md"),
         ("VISION", "vision.md"),
@@ -1154,16 +1154,10 @@ fn generate_partner_call(date: &str) -> Result<(), String> {
         append_prompt_file(&mut prompt, title, &gtd_dir.join(filename));
     }
     prompt.push_str(
-        "\n===== FINAL TASK =====\nGenerate the answer now. Write a 110–140 word Coach's Call (hard maximum 160 words).\nOutput only the SCORE and COACH_CALL tagged fields requested above.\n",
+        "\n===== FINAL TASK =====\nGenerate the answer now from the CURRENT WEEKLY BOARD only. Do not copy any prior Coach's Call,\nprior accomplishment, or prior event. Use prior boards only to recognize intentional long-term patterns.\nWrite a 110–140 word Coach's Call (hard maximum 160 words). Output only the COACH_CALL tagged field\nrequested above; do not output a score.\n",
     );
 
     let response = run_llama(&prompt, 400, "0.3")?;
-    let score = extract_score(&response)
-        .filter(|score| (1..=10).contains(score))
-        .ok_or_else(|| {
-            let excerpt = response.lines().rev().take(12).collect::<Vec<_>>().into_iter().rev().collect::<Vec<_>>().join(" ");
-            format!("model did not return a valid score (response ending: {excerpt})")
-        })?;
     let mut coach_call = extract_coach_call(&response)
         .ok_or_else(|| "model did not return a Coach's Call (expected COACH_CALL tags or ## Coach's Call heading)".to_string())?;
     let mut words = coach_call
@@ -1198,14 +1192,13 @@ fn generate_partner_call(date: &str) -> Result<(), String> {
             "Coach's Call has {words} words; expected 90–160. Model returned: {coach_call}"
         ));
     }
-    partner::run_write(date, Some(score), &coach_call)
+    partner::run_write(date, None, &coach_call)
         .map_err(|error| format!("could not save Coach's Call: {error}"))?;
     let saved = data::load_weekly_board(date);
-    if saved.score != Some(score) || saved.coach_call.is_none() {
+    if saved.coach_call.is_none() {
         return Err(format!(
-            "write verification failed for {} (score present: {}, Coach's Call present: {})",
+            "write verification failed for {} (Coach's Call present: {})",
             data::weekly_board_path(date).display(),
-            saved.score == Some(score),
             saved.coach_call.is_some()
         ));
     }
@@ -1258,6 +1251,27 @@ fn append_prompt_file(prompt: &mut String, title: &str, path: &std::path::Path) 
     match std::fs::read_to_string(path) {
         Ok(contents) => prompt.push_str(&contents),
         Err(_) => prompt.push_str("[Not present]\n"),
+    }
+}
+
+fn append_weekly_board_context(prompt: &mut String, title: &str, path: &std::path::Path) {
+    prompt.push_str(&format!("\n===== {title} =====\n"));
+    let contents = match std::fs::read_to_string(path) {
+        Ok(contents) => contents,
+        Err(_) => {
+            prompt.push_str("[Not present]\n");
+            return;
+        }
+    };
+    let mut excluded = false;
+    for line in contents.lines() {
+        if let Some(heading) = line.strip_prefix("## ") {
+            excluded = heading == "Partner Notes" || heading == "Coach's Call";
+        }
+        if !excluded {
+            prompt.push_str(line);
+            prompt.push('\n');
+        }
     }
 }
 
@@ -1322,28 +1336,6 @@ fn tag_contents<'a>(response: &'a str, tag: &str) -> Option<&'a str> {
     let opening = format!("<{tag}>");
     let closing = format!("</{tag}>");
     response.split_once(&opening)?.1.split_once(&closing).map(|(contents, _)| contents)
-}
-
-fn extract_score(response: &str) -> Option<u8> {
-    if let Some(score) = tag_contents(response, "SCORE")
-        .and_then(|value| value.trim().parse::<u8>().ok())
-    {
-        return Some(score);
-    }
-    for line in response.lines().rev() {
-        let upper = line.to_ascii_uppercase();
-        if let Some(position) = upper.find("SCORE") {
-            let suffix = &line[position + "SCORE".len()..];
-            let digits = suffix.trim_start_matches(|character: char| {
-                character == ':' || character == '-' || character == '=' || character.is_whitespace()
-            });
-            let number = digits.chars().take_while(|character| character.is_ascii_digit()).collect::<String>();
-            if let Ok(score) = number.parse::<u8>() {
-                return Some(score);
-            }
-        }
-    }
-    None
 }
 
 fn extract_coach_call(response: &str) -> Option<String> {
