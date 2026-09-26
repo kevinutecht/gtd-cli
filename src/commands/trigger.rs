@@ -69,14 +69,14 @@ fn run_loop(
                 *index = triggers.len() - 1;
             }
             _ if *finished => break,
-            ui::Key::Char('l') | ui::Key::Char(' ') | ui::Key::Enter => {
+            ui::Key::Char('l') => {
                 if *index < triggers.len() - 1 {
                     *index += 1;
                 } else {
                     *finished = true;
                 }
             }
-            ui::Key::Char('j') | ui::Key::Up if *index > 0 => {
+            ui::Key::Char('h') if *index > 0 => {
                 *index -= 1;
             }
             _ => {}
@@ -132,9 +132,9 @@ fn draw_screen(
 
     // ── Bottom help bar ─────────────────────────────────────
     let help_parts = vec![
-        (" SPACE ", ui::ACCENT, true),
+        (" l ", ui::ACCENT, true),
         (" next ", ui::C_DIM, false),
-        (" b ", ui::ACCENT, true),
+        (" h ", ui::ACCENT, true),
         (" back ", ui::C_DIM, false),
         (" q ", ui::ERROR, true),
         (" quit ", ui::C_DIM, false),
