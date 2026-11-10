@@ -21,7 +21,7 @@ All notable changes to this project will be documented in this file.
 - Initial release
 - Five horizon files: purpose, vision, goals, areas, projects
 - Ground-level lists: calendar, waiting-for, agendas, someday-maybe, trigger list
-- Weekly review TUI: 4-step guided walkthrough (Assessment → Get Clear → Get Current → Get Creative)
+- Weekly review TUI: assessment followed by a focused five-screen walkthrough (Upcoming Calendar → Waiting For → Projects → Someday/Maybe → Checklists)
 - Accountability partner: `gtd partner write` with 1–10 scoring and structured feedback
 - Brainstorm integration: `gtd review` spawns MiMo Code skills for AI-powered ideation
 - Summary command: quick system overview

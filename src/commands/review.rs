@@ -1,6 +1,6 @@
 // GTD Weekly Review — guided weekly review checklist with embedded viewers
 // Step 0: Assessment (weekly board summary)
-// Steps 1+: Standard GTD review (Get Clear, Get Current, Get Creative)
+// Steps 1+: The five-screen focused review (upcoming calendar through checklists)
 
 use std::collections::HashMap;
 use std::io::{self, Write, stdout};
@@ -261,6 +261,11 @@ pub fn run() -> io::Result<()> {
     result
 }
 
+// The assessment owns navigation index 0; review screens are numbered 1..=5.
+fn current_step(steps: &[data::ReviewStep], step_index: usize) -> &data::ReviewStep {
+    &steps[step_index - 1]
+}
+
 // ── Main loop ──────────────────────────────────────────────────────────
 
 #[allow(clippy::too_many_arguments)]
@@ -412,7 +417,7 @@ fn run_loop(
                         // Continue to step 1 (first GTD review step)
                         *step_index = 1;
                         init_viewer_state(
-                            &steps[*step_index], list_state,
+                            current_step(steps, *step_index), list_state,
                             trigger_state, calendar_state, checklists_state, altitudes_state,
                             brainstorm_state,
                         );
@@ -429,7 +434,7 @@ fn run_loop(
             // ── List viewer keys ─────────────────────────────────
             ui::Key::Char('j') if list_state.is_some() => {
                 let list = list_state.as_mut().unwrap();
-                let step = &steps[*step_index];
+                let step = current_step(steps, *step_index);
                 let total = list_total_lines(step, &list.expanded);
                 if list.cursor + 1 < total { list.cursor += 1; }
                 auto_scroll_list(list);
@@ -441,7 +446,7 @@ fn run_loop(
             }
             ui::Key::Char('x') | ui::Key::Enter if list_state.is_some() => {
                 let list = list_state.as_mut().unwrap();
-                let step = &steps[*step_index];
+                let step = current_step(steps, *step_index);
                 if let Some(idx) = list_item_at_line(step, &list.expanded, list.cursor) {
                     list.expanded[idx] = !list.expanded[idx];
                 }
@@ -453,7 +458,7 @@ fn run_loop(
             }
             ui::Key::Char('G') if list_state.is_some() => {
                 let list = list_state.as_mut().unwrap();
-                let step = &steps[*step_index];
+                let step = current_step(steps, *step_index);
                 let total = list_total_lines(step, &list.expanded);
                 if total > 0 {
                     list.cursor = total - 1;
@@ -621,8 +626,8 @@ fn run_loop(
                     if let Some(state) = checklists_state.as_mut() { state.reload(); }
                 }
             }
-            ui::Key::Char('e') if list_state.is_some() || steps[*step_index].viewer.is_some() => {
-                let step = &steps[*step_index];
+            ui::Key::Char('e') if list_state.is_some() || current_step(steps, *step_index).viewer.is_some() => {
+                let step = current_step(steps, *step_index);
                 if let Some(ref viewer) = step.viewer {
                     terminal::disable_raw_mode()?;
                     ui::reset_terminal(out)?;
@@ -635,15 +640,15 @@ fn run_loop(
 
             // ── Step navigation (Space/b when viewer active) ──
             ui::Key::Char(' ') if list_state.is_some() || trigger_state.is_some() || calendar_state.is_some() || checklists_state.is_some() || altitudes_state.is_some() || brainstorm_state.is_some() => {
-                if *step_index < steps.len() - 1 {
+                if *step_index < steps.len() {
                     *step_index += 1;
-                    init_viewer_state(&steps[*step_index], list_state, trigger_state, calendar_state, checklists_state, altitudes_state, brainstorm_state);
+                    init_viewer_state(current_step(steps, *step_index), list_state, trigger_state, calendar_state, checklists_state, altitudes_state, brainstorm_state);
                 }
             }
             ui::Key::Char('b') if list_state.is_some() || trigger_state.is_some() || calendar_state.is_some() || checklists_state.is_some() || altitudes_state.is_some() || brainstorm_state.is_some() => {
                 if *step_index > 1 {
                     *step_index -= 1;
-                    init_viewer_state(&steps[*step_index], list_state, trigger_state, calendar_state, checklists_state, altitudes_state, brainstorm_state);
+                    init_viewer_state(current_step(steps, *step_index), list_state, trigger_state, calendar_state, checklists_state, altitudes_state, brainstorm_state);
                 } else if *step_index == 1 {
                     // Go back to assessment
                     *step_index = 0;
@@ -652,9 +657,9 @@ fn run_loop(
 
             // ── Step completion (when viewer active, use 'D' for next) ──
             ui::Key::Char('D') if list_state.is_some() || trigger_state.is_some() || calendar_state.is_some() || checklists_state.is_some() || altitudes_state.is_some() || brainstorm_state.is_some() => {
-                if *step_index < steps.len() - 1 {
+                if *step_index < steps.len() {
                     *step_index += 1;
-                    init_viewer_state(&steps[*step_index], list_state, trigger_state, calendar_state, checklists_state, altitudes_state, brainstorm_state);
+                    init_viewer_state(current_step(steps, *step_index), list_state, trigger_state, calendar_state, checklists_state, altitudes_state, brainstorm_state);
                 } else {
                     *finished = true;
                 }
@@ -662,7 +667,7 @@ fn run_loop(
 
             // ── Notes (works with or without viewer) ─────────────
             ui::Key::Char('n') if list_state.is_some() => {
-                let step = &steps[*step_index];
+                let step = current_step(steps, *step_index);
                 if let Some(data::ReviewViewer::Projects) = &step.viewer {
                     let list = list_state.as_mut().unwrap();
                     let mut projects = data::load_projects();
@@ -683,23 +688,23 @@ fn run_loop(
 
             // ── No viewer: original step controls ────────────────
             ui::Key::Char(' ') | ui::Key::Enter if list_state.is_none() && trigger_state.is_none() && calendar_state.is_none() && checklists_state.is_none() && brainstorm_state.is_none() => {
-                if *step_index < steps.len() - 1 {
+                if *step_index < steps.len() {
                     *step_index += 1;
-                    init_viewer_state(&steps[*step_index], list_state, trigger_state, calendar_state, checklists_state, altitudes_state, brainstorm_state);
+                    init_viewer_state(current_step(steps, *step_index), list_state, trigger_state, calendar_state, checklists_state, altitudes_state, brainstorm_state);
                 } else {
                     *finished = true;
                 }
             }
             ui::Key::Char(' ') | ui::Key::Down if list_state.is_none() && trigger_state.is_none() && calendar_state.is_none() && checklists_state.is_none() && altitudes_state.is_none() && brainstorm_state.is_none() => {
-                if *step_index < steps.len() - 1 {
+                if *step_index < steps.len() {
                     *step_index += 1;
-                    init_viewer_state(&steps[*step_index], list_state, trigger_state, calendar_state, checklists_state, altitudes_state, brainstorm_state);
+                    init_viewer_state(current_step(steps, *step_index), list_state, trigger_state, calendar_state, checklists_state, altitudes_state, brainstorm_state);
                 }
             }
             ui::Key::Char('b') | ui::Key::Up if list_state.is_none() && trigger_state.is_none() && calendar_state.is_none() && checklists_state.is_none() && altitudes_state.is_none() && brainstorm_state.is_none() => {
                 if *step_index > 1 {
                     *step_index -= 1;
-                    init_viewer_state(&steps[*step_index], list_state, trigger_state, calendar_state, checklists_state, altitudes_state, brainstorm_state);
+                    init_viewer_state(current_step(steps, *step_index), list_state, trigger_state, calendar_state, checklists_state, altitudes_state, brainstorm_state);
                 } else if *step_index == 1 {
                     // Go back to Assessment screen
                     *step_index = 0;
@@ -1505,13 +1510,13 @@ fn draw_step(
 ) -> io::Result<()> {
     let (cols, rows) = ui::terminal_size();
     let total = steps.len();
-    let step = &steps[step_index];
-    let progress = (step_index + 1) as f64 / total as f64;
+    let step = current_step(steps, step_index);
+    let progress = step_index as f64 / total as f64;
 
     ui::clear_screen(out)?;
 
     let bar_title = " \u{1f99e} Weekly Review ";
-    let counter = format!(" {} / {} ", step_index + 1, total);
+    let counter = format!(" {} / {} ", step_index, total);
     ui::draw_top_bar(out, bar_title, &counter)?;
     ui::draw_progress_bar(out, 1, progress)?;
 
@@ -1618,7 +1623,7 @@ fn draw_step(
     }
 
     let help_parts = if list_state.is_some() {
-        let step = &steps[step_index];
+        let step = current_step(steps, step_index);
         let show_next = matches!(&step.viewer, Some(data::ReviewViewer::Projects));
         let mut parts = vec![
             (" x ", ui::ACCENT, true), (" toggle ", ui::C_DIM, false),

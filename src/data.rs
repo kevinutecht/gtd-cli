@@ -151,68 +151,8 @@ pub struct ReviewStep {
 
 pub fn review_steps() -> Vec<ReviewStep> {
     vec![
-        // Phase: Get Clear
-        ReviewStep {
-            phase: "Get Clear",
-            phase_color: "link",
-            title: "Collect Loose Papers & Materials",
-            desc: "Gather all scraps of paper, receipts, sticky notes, business\n\
-                   cards, and anything else that's been accumulating. Put them\n\
-                   in your physical inbox.",
-            viewer: Some(ReviewViewer::Altitudes),
-        },
-        ReviewStep {
-            phase: "Get Clear",
-            phase_color: "link",
-            title: "Process Physical Inbox to Zero",
-            desc: "Go through every item in your physical inbox. For each item:\n\
-                   \u{2022} Is it actionable? \u{2192} Decide next action & organize\n\
-                   \u{2022} Not actionable? \u{2192} Trash, reference, or incubate\n\
-                   \u{2022} Get your inbox to empty.",
-            viewer: None,
-        },
-        ReviewStep {
-            phase: "Get Clear",
-            phase_color: "link",
-            title: "Process Digital Inboxes to Zero",
-            desc: "Process all digital inboxes:\n\
-                   \u{2022} Email inbox \u{2192} zero\n\
-                   \u{2022} Voicemail \u{2192} zero\n\
-                   \u{2022} Text messages \u{2192} zero\n\
-                   \u{2022} Any app notifications \u{2192} clear",
-            viewer: None,
-        },
-        ReviewStep {
-            phase: "Get Clear",
-            phase_color: "link",
-            title: "Empty Your Head",
-            desc: "Do a quick mind sweep. Capture anything still bouncing\n\
-                   around in your head \u{2014} open loops, ideas, concerns, tasks.\n\
-                   Get it all out and into your inbox or trigger list.\n\n\
-                   Tip: Run gtd inbox for a focused capture session.",
-            viewer: None,
-        },
-        // Phase: Get Current
-        ReviewStep {
-            phase: "Get Current",
-            phase_color: "accent",
-            title: "Review 'Next Actions' Lists",
-            desc: "Look at every item on your next action lists.\n\
-                   \u{2022} Check off completed items\n\
-                   \u{2022} Update any stale actions\n\
-                   \u{2022} Make sure each project has a next action",
-            viewer: Some(ReviewViewer::Projects),
-        },
-        ReviewStep {
-            phase: "Get Current",
-            phase_color: "accent",
-            title: "Review Previous Calendar",
-            desc: "Look back at last week's calendar.\n\
-                   \u{2022} Any incomplete items to carry forward?\n\
-                   \u{2022} Any follow-ups needed from meetings?\n\
-                   \u{2022} Capture any loose ends.",
-            viewer: Some(ReviewViewer::Calendar),
-        },
+        // A deliberately short review: keep only the five screens that are
+        // most useful for getting the coming week into shape.
         ReviewStep {
             phase: "Get Current",
             phase_color: "accent",
@@ -269,28 +209,6 @@ pub fn review_steps() -> Vec<ReviewStep> {
                    \u{2022} Project templates\n\
                    \u{2022} Any other recurring checklists",
             viewer: Some(ReviewViewer::Checklists),
-        },
-        // Phase: Get Creative
-        ReviewStep {
-            phase: "Get Creative",
-            phase_color: "purple",
-            title: "Review Trigger List for New Ideas",
-            desc: "Use your trigger list to generate new ideas.\n\
-                   \u{2022} Run gtd trigger to walk through it\n\
-                   \u{2022} Anything new come to mind?\n\
-                   \u{2022} Any new projects, actions, or someday/maybe items?\n\n\
-                   Tip: Run gtd trigger for a guided trigger list session.",
-            viewer: Some(ReviewViewer::Trigger),
-        },
-        ReviewStep {
-            phase: "Get Creative",
-            phase_color: "purple",
-            title: "Brainstorm New Ideas",
-            desc: "Review your brainstorm ideas and wild thoughts.\n\
-                   \u{2022} What ideas are worth pursuing?\n\
-                   \u{2022} Any patterns in what you're avoiding?\n\
-                   \u{2022} Press 'b' to brainstorm 10 new ideas with AI",
-            viewer: Some(ReviewViewer::Brainstorm),
         },
     ]
 }
@@ -1330,7 +1248,34 @@ pub fn brainstorm_path() -> PathBuf {
 
 #[cfg(test)]
 mod tests {
-    use super::parse_markdown_board;
+    use super::{parse_markdown_board, review_steps, ReviewViewer};
+
+    #[test]
+    fn weekly_review_has_only_the_five_focused_screens() {
+        let steps = review_steps();
+
+        assert_eq!(steps.len(), 5);
+        assert_eq!(
+            steps.iter().map(|step| step.title).collect::<Vec<_>>(),
+            vec![
+                "Review Upcoming Calendar",
+                "Review 'Waiting For' List",
+                "Review 'Project' Lists",
+                "Review 'Someday/Maybe' List",
+                "Review Any Relevant Checklists",
+            ]
+        );
+        assert_eq!(
+            steps.iter().map(|step| step.viewer.clone()).collect::<Vec<_>>(),
+            vec![
+                Some(ReviewViewer::Calendar),
+                Some(ReviewViewer::Waiting),
+                Some(ReviewViewer::Projects),
+                Some(ReviewViewer::Someday),
+                Some(ReviewViewer::Checklists),
+            ]
+        );
+    }
 
     #[test]
     fn parses_coachs_call_as_a_dedicated_board_section() {

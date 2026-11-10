@@ -89,7 +89,7 @@
         <ul class="space-y-3 text-sm leading-relaxed">
           <li class="flex gap-2"><span style="color: var(--teal);">&#10003;</span> <strong>5 horizon files:</strong> purpose.md, vision.md, goals.md, areas.md, projects.md</li>
           <li class="flex gap-2"><span style="color: var(--teal);">&#10003;</span> <strong>Rust CLI:</strong> Single binary, zero dependencies, works fully offline</li>
-          <li class="flex gap-2"><span style="color: var(--teal);">&#10003;</span> <strong>Weekly review:</strong> Guided 4-step walkthrough with vim keybindings</li>
+          <li class="flex gap-2"><span style="color: var(--teal);">&#10003;</span> <strong>Weekly review:</strong> Focused five-screen walkthrough with vim keybindings</li>
           <li class="flex gap-2"><span style="color: var(--teal);">&#10003;</span> <strong>AI integration:</strong> Accountability partner and brainstorm prompts via local llama-agent</li>
           <li class="flex gap-2"><span style="color: var(--teal);">&#10003;</span> <strong>Plain markdown:</strong> Every file is human-readable, scriptable, versionable</li>
         </ul>
@@ -238,10 +238,10 @@
 <section class="px-6 py-20" style="background: var(--cream);">
   <div class="max-w-5xl mx-auto">
     <h2 class="font-display text-3xl md:text-4xl text-center mb-4">The Weekly Review</h2>
-    <p class="text-center mb-3 max-w-xl mx-auto" style="color: var(--warm-gray);">Every week, a guided 4-step walkthrough keeps the system trusted. Run <code style="color: var(--teal);">gtd review</code> and follow the prompts.</p>
-    <p class="text-center mb-12 max-w-xl mx-auto text-xs" style="color: var(--warm-gray);">Steps 0 and 3 run local open-source llama-agent prompts for AI-powered review and ideation.</p>
+    <p class="text-center mb-3 max-w-xl mx-auto" style="color: var(--warm-gray);">Every week, an assessment followed by five focused screens keeps the system trusted. Run <code style="color: var(--teal);">gtd review</code> and follow the prompts.</p>
+    <p class="text-center mb-12 max-w-xl mx-auto text-xs" style="color: var(--warm-gray);">Start with the assessment, then review the coming calendar, waiting-for list, projects, someday/maybe list, and checklists.</p>
 
-    <div class="grid md:grid-cols-4 gap-6">
+    <div class="grid md:grid-cols-6 gap-6">
       <div class="rounded-xl p-6 text-center" style="background: var(--paper); border-top: 3px solid var(--rust);">
         <div class="text-3xl font-display mb-3" style="color: var(--rust);">0</div>
         <h4 class="font-bold text-sm mb-2">Assessment</h4>
@@ -249,18 +249,28 @@
       </div>
       <div class="rounded-xl p-6 text-center" style="background: var(--paper); border-top: 3px solid var(--rust);">
         <div class="text-3xl font-display mb-3" style="color: var(--rust);">1</div>
-        <h4 class="font-bold text-sm mb-2">Get Clear</h4>
-        <p class="text-xs leading-relaxed" style="color: var(--warm-gray);">Process the calendar. Check waiting-for items. Clear the inbox to zero.</p>
+        <h4 class="font-bold text-sm mb-2">Upcoming Calendar</h4>
+        <p class="text-xs leading-relaxed" style="color: var(--warm-gray);">Look ahead for preparation, travel, delegation, and deferrals.</p>
       </div>
       <div class="rounded-xl p-6 text-center" style="background: var(--paper); border-top: 3px solid var(--rust);">
         <div class="text-3xl font-display mb-3" style="color: var(--rust);">2</div>
-        <h4 class="font-bold text-sm mb-2">Get Current</h4>
-        <p class="text-xs leading-relaxed" style="color: var(--warm-gray);">Review projects, next actions, someday/maybe. Walk the trigger list. Check all five horizons.</p>
+        <h4 class="font-bold text-sm mb-2">Waiting For</h4>
+        <p class="text-xs leading-relaxed" style="color: var(--warm-gray);">Follow up, acknowledge arrivals, and remove what is no longer needed.</p>
       </div>
       <div class="rounded-xl p-6 text-center" style="background: var(--paper); border-top: 3px solid var(--teal);">
         <div class="text-3xl font-display mb-3" style="color: var(--teal);">3</div>
-        <h4 class="font-bold text-sm mb-2">Get Creative</h4>
-        <p class="text-xs leading-relaxed" style="color: var(--warm-gray);">Brainstorm new ideas. Press <code style="background:var(--cream);padding:1px 4px;border-radius:3px">g</code> to run a local llama-agent brainstorming prompt and generate a concise list of fresh ideas tailored to your system.</p>
+        <h4 class="font-bold text-sm mb-2">Projects</h4>
+        <p class="text-xs leading-relaxed" style="color: var(--warm-gray);">Keep projects relevant, complete, and connected to a clear next action.</p>
+      </div>
+      <div class="rounded-xl p-6 text-center" style="background: var(--paper); border-top: 3px solid var(--teal);">
+        <div class="text-3xl font-display mb-3" style="color: var(--teal);">4</div>
+        <h4 class="font-bold text-sm mb-2">Someday/Maybe</h4>
+        <p class="text-xs leading-relaxed" style="color: var(--warm-gray);">Activate what is ready, remove what no longer interests you, and capture new possibilities.</p>
+      </div>
+      <div class="rounded-xl p-6 text-center" style="background: var(--paper); border-top: 3px solid var(--teal);">
+        <div class="text-3xl font-display mb-3" style="color: var(--teal);">5</div>
+        <h4 class="font-bold text-sm mb-2">Checklists</h4>
+        <p class="text-xs leading-relaxed" style="color: var(--warm-gray);">Scan the recurring checklists that matter for the coming week.</p>
       </div>
     </div>
 
@@ -498,9 +508,9 @@
         <rect x="530" y="80" width="150" height="120" rx="12" fill="none" stroke="#a0522d" stroke-width="2" stroke-dasharray="6 3"/>
         <text x="605" y="110" text-anchor="middle" font-family="Instrument Serif" font-size="16" fill="#a0522d">Weekly</text>
         <text x="605" y="132" text-anchor="middle" font-family="Instrument Serif" font-size="16" fill="#a0522d">Review</text>
-        <text x="605" y="158" text-anchor="middle" font-family="Bricolage Grotesque" font-size="10" fill="#8a7e6e">Get Clear</text>
-        <text x="605" y="173" text-anchor="middle" font-family="Bricolage Grotesque" font-size="10" fill="#8a7e6e">Get Current</text>
-        <text x="605" y="188" text-anchor="middle" font-family="Bricolage Grotesque" font-size="10" fill="#8a7e6e">Get Creative</text>
+        <text x="605" y="158" text-anchor="middle" font-family="Bricolage Grotesque" font-size="10" fill="#8a7e6e">Assessment + 5 screens</text>
+        <text x="605" y="173" text-anchor="middle" font-family="Bricolage Grotesque" font-size="10" fill="#8a7e6e">Calendar · Waiting · Projects</text>
+        <text x="605" y="188" text-anchor="middle" font-family="Bricolage Grotesque" font-size="10" fill="#8a7e6e">Someday/Maybe · Checklists</text>
 
         <defs><marker id="arrow2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="none" stroke="#8a7e6e" stroke-width="1"/></marker></defs>
       </svg>
